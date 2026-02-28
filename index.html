@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Bottom Line v16 (Pro Funding + Time Machine)</title>
+  <title>Bottom Line v17 (Smart Vault Edition)</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -177,7 +177,7 @@
       color: #fff; padding: 18px; border-radius: 14px;
       font-size: 1rem; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace;
     }
-    input:focus { border-color: var(--primary); }
+    input:focus, select:focus { border-color: var(--primary); }
 
     .btn {
       width: 100%; padding: 18px; border-radius: 16px; border: none;
@@ -355,12 +355,23 @@
 
   <div class="modal-overlay" id="modal-jar" onclick="closeModal(event, 'modal-jar')">
     <div class="modal-sheet">
-      <h2>New Wish</h2>
-      <input type="text" id="inp-jar-name" placeholder="Item Name (e.g. Gaming PC)">
-      <input type="number" id="inp-jar-target" placeholder="Target Cost">
-      <div class="label" style="margin-top:10px;">OPTIONAL AUTOMATION</div>
-      <input type="number" id="inp-jar-auto" placeholder="Monthly Auto-Contribution (₱)">
-      <div class="label" style="margin-bottom:20px;">If set, this amount will be deducted from Free Cash automatically when a new month starts.</div>
+      <h2>New Smart Wish</h2>
+      <input type="text" id="inp-jar-name" placeholder="Item Name (e.g. Gaming Rig)">
+      <input type="number" id="inp-jar-target" placeholder="Target Cost (₱)">
+      <div class="label" style="margin-top:10px;">GOAL DATE (DEADLINE)</div>
+      <input type="date" id="inp-jar-date" style="font-family:'Inter', sans-serif;">
+      
+      <div class="label" style="margin-top:10px;">VAULT INTERCEPT RULE</div>
+      <div style="display:flex; gap:10px; margin-bottom:10px;">
+        <select id="inp-jar-ruletype" style="margin-bottom:0; font-size:0.9rem;">
+          <option value="none">No Auto-Fund</option>
+          <option value="pct">Take Percentage (%)</option>
+          <option value="fixed">Take Fixed (₱)</option>
+        </select>
+        <input type="number" id="inp-jar-ruleamt" placeholder="Value" style="margin-bottom:0;">
+      </div>
+      <p style="font-size:0.7rem; color:#666; margin-bottom:20px;">When you add money to your Bank Vault, this rule will automatically slice off your selected amount and put it toward this goal.</p>
+      
       <button class="btn btn-primary" style="background:var(--purple); color:white;" onclick="saveJar()">Create Wish</button>
     </div>
   </div>
@@ -500,11 +511,9 @@
     // --- 3. STARTUP ---
     window.onload = () => {
       loadData();
-      
       viewMonth = data.currentMonth;
       viewDateObj = new Date(viewMonth + " 1"); 
       if (isNaN(viewDateObj)) viewDateObj = new Date(); 
-
       checkCycle(); 
       renderUI();
     };
@@ -528,7 +537,7 @@
       renderUI();
     }
 
-    // --- 4. MATH CORE (WITH HISTORICAL SNAPSHOT LOGIC) ---
+    // --- 4. MATH CORE & TIME MACHINE ---
     function calculateStats() {
       let activeTxs = [];
       let activeIncome = 0;
@@ -543,16 +552,14 @@
         if (archive) {
           activeTxs = archive.txs;
           activeIncome = archive.stats?.income || 0;
-          // Use the snapshot bank balance if it exists, otherwise fall back to current
           snapshotLiquid = archive.stats?.bankSnapshot !== undefined ? archive.stats.bankSnapshot : data.liquidCash;
         } else {
-          snapshotLiquid = data.liquidCash; // Fallback for very old months without data
+          snapshotLiquid = data.liquidCash; 
         }
       }
 
       const extraInc = activeTxs.filter(t => t.type === 'inc').reduce((s, t) => s + t.amount, 0);
       const totalIncome = activeIncome + extraInc;
-
       const dailyExp = activeTxs.filter(t => t.type === 'exp').reduce((s, t) => s + t.amount, 0);
       const billTotal = data.bills.reduce((s, b) => s + b.amount, 0);
       const totalExpenses = dailyExp + billTotal;
@@ -565,15 +572,7 @@
       const frozenCash = data.jars.reduce((s, j) => s + j.saved, 0);
       const freeCash = snapshotLiquid - frozenCash;
 
-      return { 
-        income: totalIncome, 
-        expenses: totalExpenses, 
-        limit, safe, netChange, 
-        liquid: snapshotLiquid, 
-        frozen: frozenCash, 
-        free: freeCash, 
-        txs: activeTxs 
-      };
+      return { income: totalIncome, expenses: totalExpenses, limit, safe, netChange, liquid: snapshotLiquid, frozen: frozenCash, free: freeCash, txs: activeTxs };
     }
 
     function clampInt(v, min, max) {
@@ -582,14 +581,48 @@
       return Math.max(min, Math.min(max, n));
     }
 
-    // --- 5. WISH ENGINE ---
+    // --- 5. SMART WISH ENGINE & VAULT INTERCEPT ---
+    function runVaultIntercept(amountAdded) {
+      if (amountAdded <= 0 || viewMonth !== data.currentMonth) return;
+      let interceptTotal = 0;
+      
+      data.jars.forEach(jar => {
+        if (jar.saved >= jar.target) return; 
+        let intercept = 0;
+        if (jar.ruleType === 'pct' && jar.ruleAmt > 0) {
+          intercept = amountAdded * (jar.ruleAmt / 100);
+        } else if (jar.ruleType === 'fixed' && jar.ruleAmt > 0) {
+          intercept = jar.ruleAmt; 
+        }
+        
+        // Prevent over-funding the jar beyond target
+        intercept = Math.min(intercept, jar.target - jar.saved);
+        
+        if (intercept > 0 && (interceptTotal + intercept) <= amountAdded) {
+           jar.saved += intercept;
+           interceptTotal += intercept;
+        }
+      });
+
+      if (interceptTotal > 0) {
+         setTimeout(() => alert(`Vault Intercept: Auto-allocated ₱${interceptTotal.toLocaleString()} to your active wishes!`), 500);
+      }
+    }
+
     function saveJar() {
       const n = document.getElementById('inp-jar-name').value.trim();
       const t = parseFloat(document.getElementById('inp-jar-target').value);
-      const auto = parseFloat(document.getElementById('inp-jar-auto').value) || 0;
+      const goalDate = document.getElementById('inp-jar-date').value;
+      const rType = document.getElementById('inp-jar-ruletype').value;
+      const rAmt = parseFloat(document.getElementById('inp-jar-ruleamt').value) || 0;
 
       if (n && t) {
-        data.jars.push({ name: n, target: t, saved: 0, auto });
+        data.jars.push({ 
+          name: n, target: t, saved: 0, 
+          dateCreated: new Date().toISOString(),
+          goalDate: goalDate || null,
+          ruleType: rType, ruleAmt: rAmt 
+        });
         closeModal(null, 'modal-jar');
         saveData();
       }
@@ -626,10 +659,8 @@
     function buyWish(index) {
       const jar = data.jars[index];
       data.liquidCash -= jar.saved;
-
       data.trophyRoom.unshift({ ...jar, dateBought: new Date().toISOString() });
       data.jars.splice(index, 1);
-
       saveData();
       alert(`Congratulations! You bought ${jar.name}. It is now in your Trophy Room.`);
     }
@@ -645,17 +676,13 @@
 
     function checkCycle() {
       const realMonth = getMonthLabel(new Date());
-      
       if (data.currentMonth !== realMonth) {
         viewMonth = data.currentMonth; 
         const stats = calculateStats();
-        
         const unspent = Math.max(0, stats.safe);
-        
         document.getElementById('disp-settle-unspent').innerText = `₱ ${unspent.toLocaleString()}`;
         document.getElementById('inp-settle-save').value = unspent; 
         document.getElementById('inp-settle-roll').value = 0;
-        
         openModal('modal-settle');
       }
     }
@@ -665,24 +692,24 @@
       const toSave = parseFloat(document.getElementById('inp-settle-save').value) || 0;
       const toRoll = parseFloat(document.getElementById('inp-settle-roll').value) || 0;
 
-      const autoTotal = data.jars.reduce((s, j) => s + (j.auto || 0), 0);
-      if (autoTotal > 0) {
+      // Legacy auto-support
+      const oldAutoTotal = data.jars.reduce((s, j) => s + (j.auto || 0), 0);
+      if (oldAutoTotal > 0) {
           data.jars.forEach(j => { if (j.auto) j.saved += j.auto; });
-          alert(`Auto-allocated ₱${autoTotal} to your wishes.`);
+          alert(`Legacy Auto-allocated ₱${oldAutoTotal} to your wishes.`);
       }
 
-      // ✅ FIX: Take a Snapshot of the bank balance before it changes
       data.history.push({
         id: data.currentMonth,
         txs: [...data.transactions],
-        stats: { 
-          income: data.config.baseIncome + (data.config.rollover || 0),
-          bankSnapshot: data.liquidCash // Store historical balance
-        }
+        stats: { income: data.config.baseIncome + (data.config.rollover || 0), bankSnapshot: data.liquidCash }
       });
 
       data.liquidCash += toSave;
       data.config.rollover = toRoll;
+
+      // Run new Intercept on settlement savings
+      if (toSave > 0) runVaultIntercept(toSave);
 
       data.transactions = [];
       data.currentMonth = realMonth;
@@ -716,16 +743,13 @@
     function renderCatGrid() {
       const grid = document.getElementById('cat-list');
       if (!grid) return;
-
       const cats = isExpense ? CATEGORIES.exp : CATEGORIES.inc;
       if (!selectedCat || !cats.some(c => c.id === selectedCat.id)) selectedCat = cats[0];
-
       grid.innerHTML = "";
       cats.forEach(cat => {
         const el = document.createElement('div');
         el.className = 'cat-opt' + (selectedCat.id === cat.id ? ' selected' : '');
-        el.innerText = cat.icon;
-        el.title = cat.name;
+        el.innerText = cat.icon; el.title = cat.name;
         el.onclick = () => { selectedCat = cat; renderCatGrid(); };
         grid.appendChild(el);
       });
@@ -734,28 +758,13 @@
     function saveTransaction() {
       const t = document.getElementById('inp-tx-title').value.trim();
       const rawAmt = document.getElementById('inp-tx-amt').value;
-      
       let a = 0;
-      try {
-        a = eval(rawAmt.replace(/[^-()\d/*+.]/g, ''));
-      } catch (e) {
-        alert("Invalid amount calculation.");
-        return;
-      }
+      try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch (e) { return alert("Invalid math."); }
 
       if (a && !isNaN(a)) {
-        data.transactions.unshift({
-          id: Date.now(),
-          title: t || selectedCat.name,
-          amount: a,
-          type: isExpense ? 'exp' : 'inc',
-          catIcon: selectedCat.icon,
-          catId: selectedCat.id,
-          date: new Date().toISOString()
-        });
+        data.transactions.unshift({ id: Date.now(), title: t || selectedCat.name, amount: a, type: isExpense ? 'exp' : 'inc', catIcon: selectedCat.icon, catId: selectedCat.id, date: new Date().toISOString() });
         closeModal(null, 'modal-tx');
-        document.getElementById('inp-tx-title').value = "";
-        document.getElementById('inp-tx-amt').value = "";
+        document.getElementById('inp-tx-title').value = ""; document.getElementById('inp-tx-amt').value = "";
         saveData();
       }
     }
@@ -765,9 +774,7 @@
     function saveBill() {
       const n = document.getElementById('inp-bill-name').value.trim();
       const rawAmt = document.getElementById('inp-bill-amt').value;
-      let a = 0;
-      try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
-      
+      let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
       const d = parseInt(document.getElementById('inp-bill-day').value, 10) || 1;
       if (n && a) { data.bills.push({ name: n, amount: a, day: d }); closeModal(null, 'modal-bill'); saveData(); }
     }
@@ -783,11 +790,10 @@
 
     function saveAdjustment() {
       const rawAmt = document.getElementById('inp-adjust-amt').value;
-      let a = 0;
-      try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
+      let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
 
       if (!isNaN(a)) { 
-        if (adjMode === 'add') data.liquidCash += a;
+        if (adjMode === 'add') { data.liquidCash += a; runVaultIntercept(a); }
         else if (adjMode === 'sub') data.liquidCash -= a;
         else data.liquidCash = a;
         
@@ -799,70 +805,37 @@
 
     function saveIncome() { 
       const rawAmt = document.getElementById('inp-income-setting').value;
-      let a = 0;
-      try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
-      if (!isNaN(a)) {
-        data.config.baseIncome = a; 
-        closeModal(null, 'modal-income'); 
-        saveData(); 
-      }
+      let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
+      if (!isNaN(a)) { data.config.baseIncome = a; closeModal(null, 'modal-income'); saveData(); }
     }
 
     function transferFromBank() {
       const rawAmt = document.getElementById('inp-transfer-amt').value;
-      let a = 0;
-      try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
+      let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
 
       if (a && !isNaN(a) && a > 0) {
-        if (a > data.liquidCash) {
-          alert("You don't have that much in your Bank/Savings!");
-          return;
-        }
-        
+        if (a > data.liquidCash) return alert("You don't have that much in your Bank/Savings!");
         data.liquidCash -= a;
-        data.transactions.unshift({
-          id: Date.now(),
-          title: "Transfer from Bank",
-          amount: a,
-          type: 'inc',
-          catIcon: '🏦',
-          catId: 'transfer',
-          date: new Date().toISOString()
-        });
-
-        closeModal(null, 'modal-income');
-        document.getElementById('inp-transfer-amt').value = "";
-        saveData();
+        data.transactions.unshift({ id: Date.now(), title: "Transfer from Bank", amount: a, type: 'inc', catIcon: '🏦', catId: 'transfer', date: new Date().toISOString() });
+        closeModal(null, 'modal-income'); document.getElementById('inp-transfer-amt').value = ""; saveData();
       }
     }
 
-    // ✅ NEW FIX: FUNDING OVERRIDE (Fix Rollover Typo)
     function overrideRollover() {
       const rawAmt = document.getElementById('inp-rollover-override').value;
-      let a = 0;
-      try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
-      
-      if (!isNaN(a)) {
-        data.config.rollover = a;
-        closeModal(null, 'modal-income');
-        document.getElementById('inp-rollover-override').value = "";
-        saveData();
-      }
+      let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
+      if (!isNaN(a)) { data.config.rollover = a; closeModal(null, 'modal-income'); document.getElementById('inp-rollover-override').value = ""; saveData(); }
     }
 
     function updateBudgetSlider(val) {
-      const pct = clampInt(val, 0, 100);
-      data.config.safePct = pct;
-      const lbl = document.getElementById('lbl-safe-pct');
-      if (lbl) lbl.innerText = pct + "%";
-      const slider = document.getElementById('slider-safe');
-      if (slider) slider.value = String(pct);
+      const pct = clampInt(val, 0, 100); data.config.safePct = pct;
+      const lbl = document.getElementById('lbl-safe-pct'); if (lbl) lbl.innerText = pct + "%";
+      const slider = document.getElementById('slider-safe'); if (slider) slider.value = String(pct);
       saveData();
     }
     function setSafePct(pct) { updateBudgetSlider(pct); }
-
     function togglePrivacy() { data.config.privacyMode = !data.config.privacyMode; saveData(); }
-    function exportData() { navigator.clipboard.writeText(JSON.stringify(data)).then(() => alert("Copied!")); }
+    function exportData() { navigator.clipboard.writeText(JSON.stringify(data)).then(() => alert("Copied to clipboard! Backup safe.")); }
     function importData() { try { data = JSON.parse(document.getElementById('inp-import').value); saveData(); location.reload(); } catch (e) { alert("Invalid Code"); } }
     function hardReset() { if (confirm("Delete All?")) { localStorage.removeItem(VERSION); location.reload(); } }
 
@@ -872,8 +845,6 @@
       const isCurrentMonth = viewMonth === data.currentMonth;
 
       document.getElementById('lbl-month-display').innerText = viewMonth;
-
-      // Lock UI elements if viewing history
       document.getElementById('main-fab').style.display = isCurrentMonth ? 'flex' : 'none';
       document.getElementById('div-update-bank-btn').style.display = isCurrentMonth ? 'block' : 'none';
       document.getElementById('btn-new-wish').style.display = isCurrentMonth ? 'block' : 'none';
@@ -889,7 +860,6 @@
 
       document.getElementById('disp-safe').innerText = `₱ ${stats.safe.toLocaleString()}`;
       
-      // ✅ FIX: Daily Burn Rate Math
       let daysRemaining = 1;
       if (isCurrentMonth) {
          const now = new Date();
@@ -921,10 +891,8 @@
       renderBillList();
       updateRingChart(stats);
 
-      const slider = document.getElementById('slider-safe');
-      if (slider) slider.value = String(clampInt(data.config.safePct, 0, 100));
-      const lbl = document.getElementById('lbl-safe-pct');
-      if (lbl) lbl.innerText = `${clampInt(data.config.safePct, 0, 100)}%`;
+      const slider = document.getElementById('slider-safe'); if (slider) slider.value = String(clampInt(data.config.safePct, 0, 100));
+      const lbl = document.getElementById('lbl-safe-pct'); if (lbl) lbl.innerText = `${clampInt(data.config.safePct, 0, 100)}%`;
     }
 
     function renderJarList() {
@@ -940,16 +908,40 @@
           ? `<button class="btn btn-claim" style="padding:10px; font-size:0.8rem; margin-top:10px;" onclick="event.stopPropagation(); allocateToJar(${i})">🏆 CLAIM NOW</button>`
           : `<div style="height:4px; background:#333; margin-top:10px; border-radius:2px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:var(--purple);"></div></div>`;
 
-        const autoBadge = jar.auto ? `<div style="font-size:0.6rem; color:var(--success); margin-top:2px;">⚡ Auto: ₱${jar.auto.toLocaleString()}</div>` : '';
         const cancelBtn = isCurrentMonth ? `<div class="jar-cancel-btn" onclick="event.stopPropagation(); deleteJar(${i})">✕</div>` : '';
+
+        // SMART WISH LOGIC RENDER
+        const createdStr = jar.dateCreated ? new Date(jar.dateCreated).toLocaleDateString(undefined, {month:'short', year:'2-digit'}) : 'N/A';
+        const goalStr = jar.goalDate ? new Date(jar.goalDate).toLocaleDateString(undefined, {month:'short', year:'2-digit'}) : 'No Date';
+
+        let paceHtml = '';
+        if (jar.goalDate && !isReady) {
+          const msLeft = new Date(jar.goalDate) - new Date();
+          const monthsLeft = Math.max(1, Math.ceil(msLeft / (1000 * 60 * 60 * 24 * 30)));
+          const neededPerMonth = (jar.target - jar.saved) / monthsLeft;
+          if (msLeft < 0) {
+             paceHtml = `<div style="font-size:0.6rem; color:var(--danger); margin-top:4px;">⚠️ Overdue</div>`;
+          } else {
+             paceHtml = `<div style="font-size:0.6rem; color:var(--warning); margin-top:4px;">⚠️ Pace: Need ₱${Math.ceil(neededPerMonth).toLocaleString()}/mo</div>`;
+          }
+        } else if (isReady) {
+          paceHtml = `<div style="font-size:0.6rem; color:var(--success); margin-top:4px;">✅ Goal Reached!</div>`;
+        }
+
+        let ruleHtml = '';
+        if (jar.ruleType === 'pct') ruleHtml = `⚡ Auto: ${jar.ruleAmt}% of bank deposits`;
+        else if (jar.ruleType === 'fixed') ruleHtml = `⚡ Auto: ₱${jar.ruleAmt.toLocaleString()} of bank deposits`;
+        if (ruleHtml) ruleHtml = `<div style="font-size:0.6rem; color:var(--success); margin-top:2px;">${ruleHtml}</div>`;
 
         grid.innerHTML += `
           <div class="card" style="padding:15px; margin:0; cursor:${isCurrentMonth ? 'pointer' : 'default'}; border:1px solid ${isReady ? 'var(--gold)' : '#333'}; position:relative;" ${isCurrentMonth ? `onclick="allocateToJar(${i})"` : ''}>
             ${cancelBtn}
-            <div style="font-size:1.5rem; margin-bottom:10px;">${isReady ? '🎁' : '🧞'}</div>
-            <div class="bold" style="padding-right:20px;">${jar.name}</div>
-            <div class="label" style="margin-top:5px;">₱${jar.saved.toLocaleString()} / ₱${jar.target.toLocaleString()}</div>
-            ${autoBadge}
+            <div style="font-size:1.5rem; margin-bottom:5px;">${isReady ? '🎁' : '🧞'}</div>
+            <div class="bold" style="padding-right:20px; font-size:1rem;">${jar.name}</div>
+            <div style="font-size:0.55rem; color:#666; margin-bottom:5px;">${createdStr} ➔ ${goalStr}</div>
+            <div class="label" style="margin-top:5px; color:#fff;">₱${jar.saved.toLocaleString()} / ₱${jar.target.toLocaleString()}</div>
+            ${ruleHtml}
+            ${paceHtml}
             ${actionHtml}
           </div>`;
       });
@@ -958,18 +950,23 @@
     function renderTrophyList() {
       const list = document.getElementById('trophy-list');
       list.innerHTML = "";
-      if (data.trophyRoom.length === 0) {
-        list.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No completed wishes yet.</div>`;
-        return;
-      }
+      if (data.trophyRoom.length === 0) { list.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No completed wishes yet.</div>`; return; }
 
       data.trophyRoom.forEach(t => {
+        let verdictHtml = '';
+        if (t.goalDate && t.dateBought) {
+           const daysDiff = Math.floor((new Date(t.goalDate) - new Date(t.dateBought)) / (1000 * 60 * 60 * 24));
+           if (daysDiff >= 0) verdictHtml = `<div style="font-size:0.65rem; color:var(--success);">Beat goal by ${daysDiff} days!</div>`;
+           else verdictHtml = `<div style="font-size:0.65rem; color:#888;">Missed goal by ${Math.abs(daysDiff)} days</div>`;
+        }
+
         list.innerHTML += `
           <div class="trophy-item">
             <div style="font-size:1.5rem; margin-right:15px;">🏆</div>
             <div style="flex:1;">
               <div class="bold">${t.name}</div>
-              <div class="label">BOUGHT: ${new Date(t.dateBought).toLocaleDateString()}</div>
+              <div class="label" style="margin-bottom:2px;">BOUGHT: ${new Date(t.dateBought).toLocaleDateString()}</div>
+              ${verdictHtml}
             </div>
             <div class="mono bold text-gold">-₱${(t.target ?? t.saved ?? 0).toLocaleString()}</div>
           </div>`;
@@ -979,17 +976,12 @@
     function renderTxList(txs) {
       const list = document.getElementById('tx-list');
       list.innerHTML = "";
-
-      if (!txs || txs.length === 0) {
-        list.innerHTML = `<div style="text-align:center; color:#333; margin-top:30px; font-size:0.9rem;">No data for ${viewMonth}</div>`;
-        return;
-      }
+      if (!txs || txs.length === 0) { list.innerHTML = `<div style="text-align:center; color:#333; margin-top:30px; font-size:0.9rem;">No data for ${viewMonth}</div>`; return; }
 
       const groups = {};
       txs.forEach(tx => {
         const dateKey = new Date(tx.date).toLocaleDateString();
-        if (!groups[dateKey]) groups[dateKey] = [];
-        groups[dateKey].push(tx);
+        if (!groups[dateKey]) groups[dateKey] = []; groups[dateKey].push(tx);
       });
 
       Object.keys(groups).forEach(date => {
@@ -998,9 +990,7 @@
           const color = tx.type === 'exp' ? 'icon-exp' : 'icon-inc';
           const amtColor = tx.type === 'exp' ? 'text-red' : 'text-teal';
           const sign = tx.type === 'exp' ? '-' : '+';
-          const del = (viewMonth === data.currentMonth)
-            ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>`
-            : '';
+          const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
 
           list.innerHTML += `
             <div class="tx-item">
@@ -1026,11 +1016,7 @@
         let borderColor = i === today ? "var(--primary)" : "#333";
         let textColor = i === today ? "var(--primary)" : "#666";
 
-        if (hasBill) {
-          textColor = "#fff";
-          borderColor = i < today ? "var(--danger)" : (i === today ? "var(--primary)" : "#555");
-        }
-
+        if (hasBill) { textColor = "#fff"; borderColor = i < today ? "var(--danger)" : (i === today ? "var(--primary)" : "#555"); }
         container.innerHTML += `
           <div style="min-width: 40px; height: 50px; border: 1px solid ${borderColor}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: ${hasBill ? 'rgba(255,255,255,0.05)' : 'transparent'}; color: ${textColor};">
             <span style="font-size:0.8rem; font-weight:bold;">${i}</span>
@@ -1044,32 +1030,21 @@
       list.innerHTML = "";
       const today = new Date().getDate();
 
-      data.bills
-        .slice()
-        .sort((a, b) => a.day - b.day)
-        .forEach((b, i) => {
-          const diff = b.day - today;
-          const status = today > b.day ? "Past Due" : (diff <= 3 ? `Due in ${diff} days` : `Due Day ${b.day}`);
-          const color = today > b.day ? "#666" : (diff <= 3 ? "var(--warning)" : "var(--primary)");
+      data.bills.slice().sort((a, b) => a.day - b.day).forEach((b, i) => {
+        const diff = b.day - today;
+        const status = today > b.day ? "Past Due" : (diff <= 3 ? `Due in ${diff} days` : `Due Day ${b.day}`);
+        const color = today > b.day ? "#666" : (diff <= 3 ? "var(--warning)" : "var(--primary)");
 
-          list.innerHTML += `
-            <div class="card" style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-left:3px solid ${color};">
-              <div>
-                <div class="bold">${b.name}</div>
-                <div class="label" style="color:${color}">${status}</div>
-              </div>
-              <div style="display:flex; align-items:center;">
-                <span class="mono bold">₱${b.amount.toLocaleString()}</span>
-                <span style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteBill(${i})">✕</span>
-              </div>
-            </div>`;
-        });
+        list.innerHTML += `
+          <div class="card" style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-left:3px solid ${color};">
+            <div><div class="bold">${b.name}</div><div class="label" style="color:${color}">${status}</div></div>
+            <div style="display:flex; align-items:center;"><span class="mono bold">₱${b.amount.toLocaleString()}</span><span style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteBill(${i})">✕</span></div>
+          </div>`;
+      });
     }
 
     function updateRingChart(stats) {
-      const canvas = document.getElementById('chart-ring');
-      if (!canvas) return;
-
+      const canvas = document.getElementById('chart-ring'); if (!canvas) return;
       const ctx = canvas.getContext('2d');
 
       const limitForChart = Math.max(1, stats.limit || 0);
@@ -1081,51 +1056,29 @@
       const remainingColor = getComputedStyle(document.documentElement).getPropertyValue('--success').trim() || '#30D158';
 
       const pctUsed = (stats.limit > 0) ? Math.min(999, Math.round((usedRaw / stats.limit) * 100)) : 0;
-      const lblRing = document.getElementById('lbl-ring-pct');
-      if (lblRing) lblRing.innerText = `${pctUsed}%`;
+      const lblRing = document.getElementById('lbl-ring-pct'); if (lblRing) lblRing.innerText = `${pctUsed}%`;
 
       if (chartInstance) chartInstance.destroy();
       chartInstance = new Chart(ctx, {
         type: 'doughnut',
-        data: {
-          datasets: [{
-            data: [used, remaining],
-            backgroundColor: [usedColor, remainingColor],
-            borderWidth: 0,
-            borderRadius: 20
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '85%',
-          plugins: { legend: { display: false }, tooltip: { enabled: false } },
-          animation: { duration: 450 }
-        }
+        data: { datasets: [{ data: [used, remaining], backgroundColor: [usedColor, remainingColor], borderWidth: 0, borderRadius: 20 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 450 } }
       });
     }
 
     function switchTab(viewId, navEl) {
       document.querySelectorAll('.view-section').forEach(el => { el.classList.add('hidden'); el.style.display = 'none'; });
-      const target = document.getElementById(`view-${viewId}`);
-      target.classList.remove('hidden'); target.style.display = 'block';
-
-      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      navEl.classList.add('active');
-
+      const target = document.getElementById(`view-${viewId}`); target.classList.remove('hidden'); target.style.display = 'block';
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); navEl.classList.add('active');
       document.getElementById('main-scroll').scrollTop = 0;
     }
 
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(e, id) { if (!e || e.target.id === id) document.getElementById(id).classList.remove('open'); }
-
     function openNewTx() { renderCatGrid(); setTxType(isExpense ? 'exp' : 'inc'); openModal('modal-tx'); }
     function openSettings() {
-      const pct = clampInt(data.config.safePct, 0, 100);
-      const slider = document.getElementById('slider-safe');
-      const lbl = document.getElementById('lbl-safe-pct');
-      if (slider) slider.value = String(pct);
-      if (lbl) lbl.innerText = `${pct}%`;
+      const pct = clampInt(data.config.safePct, 0, 100); const slider = document.getElementById('slider-safe'); const lbl = document.getElementById('lbl-safe-pct');
+      if (slider) slider.value = String(pct); if (lbl) lbl.innerText = `${pct}%`;
       openModal('modal-settings');
     }
     
@@ -1141,34 +1094,15 @@
     function openAdjustSavings() { openModal('modal-adjust'); }
 
     function runSearch(q) {
-      const res = document.getElementById('search-results');
-      res.innerHTML = "";
-      if (!q || q.length < 2) return;
-
+      const res = document.getElementById('search-results'); res.innerHTML = ""; if (!q || q.length < 2) return;
       let matches = [];
       data.transactions.forEach(t => matches.push({ ...t, src: 'Current' }));
       data.history.forEach(h => (h.txs || []).forEach(t => matches.push({ ...t, src: h.id })));
-
-      const needle = q.toLowerCase();
-      matches = matches.filter(m => (m.title || '').toLowerCase().includes(needle));
-
-      if (matches.length === 0) {
-        res.innerHTML = "<div style='text-align:center;margin-top:20px;color:#666'>No matches</div>";
-        return;
-      }
-
+      const needle = q.toLowerCase(); matches = matches.filter(m => (m.title || '').toLowerCase().includes(needle));
+      if (matches.length === 0) { res.innerHTML = "<div style='text-align:center;margin-top:20px;color:#666'>No matches</div>"; return; }
       matches.forEach(m => {
-        const c = m.type === 'exp' ? 'text-red' : 'text-teal';
-        const s = m.type === 'exp' ? '-' : '+';
-        res.innerHTML += `
-          <div class="tx-item">
-            <div class="bold" style="font-size:1.2rem; margin-right:10px;">${m.catIcon || '•'}</div>
-            <div style="flex:1;">
-              <div class="bold">${m.title}</div>
-              <div class="label">${m.src}</div>
-            </div>
-            <div class="mono bold ${c}">${s}₱${m.amount.toLocaleString()}</div>
-          </div>`;
+        const c = m.type === 'exp' ? 'text-red' : 'text-teal'; const s = m.type === 'exp' ? '-' : '+';
+        res.innerHTML += `<div class="tx-item"><div class="bold" style="font-size:1.2rem; margin-right:10px;">${m.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${m.title}</div><div class="label">${m.src}</div></div><div class="mono bold ${c}">${s}₱${m.amount.toLocaleString()}</div></div>`;
       });
     }
   </script>
