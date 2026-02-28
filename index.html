@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Bottom Line v11 (Asset Edition - Patched)</title>
+  <title>Bottom Line v15 (Pro Funding Edition)</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -172,7 +172,6 @@
     }
     .fab:active { transform: translateX(-50%) scale(0.9); }
 
-    /* ✅ FIX: Removed 'number' restriction globally to allow calculator formulas */
     input, select {
       width: 100%; background: #000; border: 1px solid #333;
       color: #fff; padding: 18px; border-radius: 14px;
@@ -264,8 +263,8 @@
           </div>
 
           <div style="margin-top:20px; padding-top:20px; border-top:1px solid #333; display:flex; justify-content:space-between;">
-            <div onclick="openIncomeModal()">
-              <div class="label">INCOME & ROLLOVER</div>
+            <div onclick="openIncomeModal()" style="cursor:pointer;">
+              <div class="label">TOTAL FUNDING</div>
               <div class="mono bold blur-sensitive" id="disp-income-val">₱0</div>
             </div>
             <div style="text-align:right;">
@@ -419,9 +418,20 @@
 
   <div class="modal-overlay" id="modal-income" onclick="closeModal(event, 'modal-income')">
     <div class="modal-sheet">
-      <h2>Set Income</h2>
+      <h2>Fund Your Month</h2>
+      <p style="color:#666; margin-bottom:20px;">Choose how to fund your current budget.</p>
+
+      <div class="label">1. RECURRING BASELINE</div>
+      <p style="font-size:0.75rem; color:#555; margin-bottom:10px;">Expected monthly fixed income (Leave at 0 if fully variable).</p>
       <input type="text" id="inp-income-setting" placeholder="Monthly Base Income">
-      <button class="btn btn-primary" onclick="saveIncome()">Update</button>
+      <button class="btn btn-glass" onclick="saveIncome()">Set Baseline</button>
+
+      <div style="margin: 25px 0; border-top: 1px dashed #333;"></div>
+
+      <div class="label">2. PULL FROM SAVINGS</div>
+      <p style="font-size:0.75rem; color:#555; margin-bottom:10px;">Move money from your Bank back into your spending budget.</p>
+      <input type="text" id="inp-transfer-amt" placeholder="Amount to withdraw (₱)">
+      <button class="btn btn-primary" style="background:var(--warning); color:#000;" onclick="transferFromBank()">Transfer to Budget</button>
     </div>
   </div>
 
@@ -437,7 +447,7 @@
 
   <script>
     // --- 1. CONFIGURATION ---
-    const VERSION = 'bl_asset_v11';
+    const VERSION = 'bl_asset_v11'; // Safe keeping your existing storage
 
     const CATEGORIES = {
       exp: [
@@ -482,9 +492,7 @@
     window.onload = () => {
       loadData();
       
-      // ✅ FIX: Force view to whatever the database considers current month so checks align
       viewMonth = data.currentMonth;
-      // Safari/iOS safe date parsing for arrows later
       viewDateObj = new Date(viewMonth + " 1"); 
       if (isNaN(viewDateObj)) viewDateObj = new Date(); 
 
@@ -518,7 +526,6 @@
 
       if (viewMonth === data.currentMonth) {
         activeTxs = data.transactions;
-        // ✅ FIX: Include rollover in the current active income
         activeIncome = data.config.baseIncome + (data.config.rollover || 0);
       } else {
         const archive = data.history.find(h => h.id === viewMonth);
@@ -565,7 +572,6 @@
       }
     }
 
-    // ✅ FIX: Cancel Wishlist Item
     function deleteJar(index) {
       if (confirm("Cancel this wish? Saved funds will remain in your Free Cash.")) {
         data.jars.splice(index, 1);
@@ -603,7 +609,7 @@
       alert(`Congratulations! You bought ${jar.name}. It is now in your Trophy Room.`);
     }
 
-    // --- 6. CYCLE ENGINE (✅ NEW MONTH SETTLEMENT FIX) ---
+    // --- 6. CYCLE ENGINE ---
     function getMonthLabel(date) { return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); }
 
     function changeMonth(dir) {
@@ -616,14 +622,13 @@
       const realMonth = getMonthLabel(new Date());
       
       if (data.currentMonth !== realMonth) {
-        // Ensure we calculate unspent money based on the database's outgoing month
         viewMonth = data.currentMonth; 
         const stats = calculateStats();
         
         const unspent = Math.max(0, stats.safe);
         
         document.getElementById('disp-settle-unspent').innerText = `₱ ${unspent.toLocaleString()}`;
-        document.getElementById('inp-settle-save').value = unspent; // Suggest putting it all to savings
+        document.getElementById('inp-settle-save').value = unspent; 
         document.getElementById('inp-settle-roll').value = 0;
         
         openModal('modal-settle');
@@ -635,25 +640,21 @@
       const toSave = parseFloat(document.getElementById('inp-settle-save').value) || 0;
       const toRoll = parseFloat(document.getElementById('inp-settle-roll').value) || 0;
 
-      // Process automatic wish contributions first if any
       const autoTotal = data.jars.reduce((s, j) => s + (j.auto || 0), 0);
       if (autoTotal > 0) {
           data.jars.forEach(j => { if (j.auto) j.saved += j.auto; });
           alert(`Auto-allocated ₱${autoTotal} to your wishes.`);
       }
 
-      // Archive previous month
       data.history.push({
         id: data.currentMonth,
         txs: [...data.transactions],
         stats: { income: data.config.baseIncome + (data.config.rollover || 0) }
       });
 
-      // Apply the selected budget movements
       data.liquidCash += toSave;
       data.config.rollover = toRoll;
 
-      // Start completely fresh
       data.transactions = [];
       data.currentMonth = realMonth;
       viewMonth = realMonth;
@@ -706,7 +707,6 @@
       const rawAmt = document.getElementById('inp-tx-amt').value;
       
       let a = 0;
-      // ✅ FIX: Basic calculator logic (evaluates "150+50" before saving)
       try {
         a = eval(rawAmt.replace(/[^-()\d/*+.]/g, ''));
       } catch (e) {
@@ -745,7 +745,6 @@
     
     function deleteBill(i) { if (confirm("Remove bill?")) { data.bills.splice(i, 1); saveData(); } }
 
-    // ✅ FIX: Enhanced Savings Logic (+, -, Set)
     function setAdjMode(mode) {
       adjMode = mode;
       document.getElementById('btn-adj-add').style.borderColor = mode === 'add' ? 'var(--primary)' : 'transparent';
@@ -777,6 +776,38 @@
         data.config.baseIncome = a; 
         closeModal(null, 'modal-income'); 
         saveData(); 
+      }
+    }
+
+    // ✅ NEW FIX: TRANSFER FROM VAULT
+    function transferFromBank() {
+      const rawAmt = document.getElementById('inp-transfer-amt').value;
+      let a = 0;
+      try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
+
+      if (a && !isNaN(a) && a > 0) {
+        if (a > data.liquidCash) {
+          alert("You don't have that much in your Bank/Savings!");
+          return;
+        }
+        
+        // 1. Deduct from Bank
+        data.liquidCash -= a;
+        
+        // 2. Add as an "Income" transaction to the current budget
+        data.transactions.unshift({
+          id: Date.now(),
+          title: "Transfer from Bank",
+          amount: a,
+          type: 'inc',
+          catIcon: '🏦',
+          catId: 'transfer',
+          date: new Date().toISOString()
+        });
+
+        closeModal(null, 'modal-income');
+        document.getElementById('inp-transfer-amt').value = "";
+        saveData();
       }
     }
 
@@ -853,7 +884,6 @@
 
         const autoBadge = jar.auto ? `<div style="font-size:0.6rem; color:var(--success); margin-top:2px;">⚡ Auto: ₱${jar.auto.toLocaleString()}</div>` : '';
 
-        // ✅ FIX: Added Cancel Icon
         grid.innerHTML += `
           <div class="card" style="padding:15px; margin:0; cursor:pointer; border:1px solid ${isReady ? 'var(--gold)' : '#333'}; position:relative;" onclick="allocateToJar(${i})">
             <div class="jar-cancel-btn" onclick="event.stopPropagation(); deleteJar(${i})">✕</div>
@@ -977,7 +1007,6 @@
         });
     }
 
-    // --- 9. CHARTS & NAV ---
     function updateRingChart(stats) {
       const canvas = document.getElementById('chart-ring');
       if (!canvas) return;
@@ -1040,7 +1069,12 @@
       if (lbl) lbl.innerText = `${pct}%`;
       openModal('modal-settings');
     }
-    function openIncomeModal() { document.getElementById('inp-income-setting').value = data.config.baseIncome || ""; openModal('modal-income'); }
+    
+    function openIncomeModal() { 
+      document.getElementById('inp-income-setting').value = data.config.baseIncome || ""; 
+      openModal('modal-income'); 
+    }
+    
     function openNewBill() { openModal('modal-bill'); }
     function openNewJar() { openModal('modal-jar'); }
     function openAdjustSavings() { openModal('modal-adjust'); }
