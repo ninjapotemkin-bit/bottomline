@@ -57,7 +57,7 @@
     .icon-exp { color: var(--danger); background: rgba(255, 59, 48, 0.12); }
     .icon-asset { color: var(--gold); background: rgba(255, 214, 10, 0.12); } 
 
-    .fab { position: fixed; left: 50%; transform: translateX(-50%); width: var(--fab-h); height: var(--fab-h); border-radius: 20px; background: var(--primary); color: #000; font-size: 2rem; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(0, 229, 255, 0.4); z-index: 102; cursor: pointer; border: 4px solid #000; bottom: calc(var(--nav-gap) + env(safe-area-inset-bottom) + 25px); }
+    .fab { position: fixed; left: 50%; transform: translateX(-50%); width: var(--fab-h); height: var(--fab-h); border-radius: 20px; background: var(--primary); color: #000; font-size: 2rem; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(0, 229, 255, 0.4); z-index: 102; cursor: pointer; border: 4px solid #000; bottom: calc(var(--nav-gap) + env(safe-area-inset-bottom) + 7px); }
     input, select { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 18px; border-radius: 14px; font-size: 1rem; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; }
     input:focus, select:focus { border-color: var(--primary); }
     .btn { width: 100%; padding: 18px; border-radius: 16px; border: none; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; justify-content: center; align-items: center; }
@@ -196,7 +196,7 @@
   <div class="nav-island">
     <div class="nav-item active" onclick="switchTab('home', this)"><div class="nav-icon">🏠</div></div>
     <div class="nav-item" onclick="switchTab('savings', this)"><div class="nav-icon">🏦</div></div>
-    <div style="width:40px;"></div> <div class="nav-item" onclick="switchTab('bills', this)"><div class="nav-icon">🧾</div></div>
+    <div style="width:50px;"></div> <div class="nav-item" onclick="switchTab('bills', this)"><div class="nav-icon">🧾</div></div>
     <div class="nav-item" onclick="switchTab('insights', this)"><div class="nav-icon">📊</div></div>
   </div>
   <div class="fab" id="main-fab" onclick="openNewTx()">+</div>
@@ -403,7 +403,7 @@
   </div>
 
   <script>
-    const VERSION = 'bl_asset_v12'; 
+    const VERSION = 'bl_asset_v11'; // REVERTED: This is the key change to restore your data!
 
     const CATEGORIES = {
       exp: [
@@ -799,7 +799,7 @@
         
         if (!isExpense) {
             finalTag = document.getElementById('inp-tx-stream').value;
-            if (!finalTag) return alert("Please select an Income Source."); // Validation block
+            if (!finalTag) return alert("Please select an Income Source.");
         }
 
         data.transactions.unshift({ id: Date.now(), title: t || selectedCat.name, amount: a, type: finalType, catIcon: selectedCat.icon, catId: finalTag, date: new Date().toISOString() });
