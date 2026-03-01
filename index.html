@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Bottom Line v20 (Master Architecture)</title>
+  <title>Bottom Line v21 (Master Architecture)</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -39,8 +39,8 @@
     .icon-btn.active { color: var(--primary); text-shadow: 0 0 10px var(--primary); }
 
     .nav-island { position: fixed; left: 20px; right: 20px; height: var(--nav-h); bottom: calc(var(--nav-gap) + env(safe-area-inset-bottom)); background: rgba(20, 20, 20, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 35px; display: flex; justify-content: space-around; align-items: center; z-index: 100; max-width: 440px; margin: 0 auto; }
-    .nav-item { display: flex; flex-direction: column; align-items: center; width: 50px; color: #555; cursor: pointer; }
-    .nav-item.active { color: var(--primary); }
+    .nav-item { display: flex; flex-direction: column; align-items: center; width: 50px; color: #555; cursor: pointer; font-size: 1.4rem; }
+    .nav-item.active { color: var(--primary); text-shadow: 0 0 10px rgba(0,229,255,0.4); }
 
     .card { background: var(--bg-surface); border: 1px solid #222; border-radius: var(--radius-L); padding: 24px; margin-bottom: 16px; position: relative; overflow: hidden; }
     .asset-card { background: linear-gradient(135deg, #1f1c0d 0%, #0d0d0d 100%); border: 1px solid #333; border-radius: var(--radius-L); padding: 24px; margin-bottom: 24px; }
@@ -179,15 +179,25 @@
         <button class="btn btn-glass" style="margin-top:20px; border-style:dashed;" onclick="openNewBill()">+ Add Bill</button>
       </div>
 
+      <div id="view-insights" class="view-section hidden">
+        <div class="card" style="text-align:center; padding: 24px;">
+            <div class="label" style="margin-bottom:20px;">SPENDING BREAKDOWN</div>
+            <div style="position:relative; height: 250px; width: 100%;">
+                <canvas id="chart-insights"></canvas>
+            </div>
+        </div>
+        <div class="section-title">CATEGORY TOTALS</div>
+        <div id="insights-list"></div>
+      </div>
+
     </div>
   </div>
 
   <div class="nav-island">
     <div class="nav-item active" onclick="switchTab('home', this)"><div class="nav-icon">🏠</div></div>
     <div class="nav-item" onclick="switchTab('savings', this)"><div class="nav-icon">🏦</div></div>
-    <div style="width:40px;"></div>
-    <div class="nav-item" onclick="switchTab('bills', this)"><div class="nav-icon">🧾</div></div>
-    <div class="nav-item" style="visibility:hidden;"></div>
+    <div style="width:40px;"></div> <div class="nav-item" onclick="switchTab('bills', this)"><div class="nav-icon">🧾</div></div>
+    <div class="nav-item" onclick="switchTab('insights', this)"><div class="nav-icon">📊</div></div>
   </div>
   <div class="fab" id="main-fab" onclick="openNewTx()">+</div>
 
@@ -285,6 +295,7 @@
             <span id="btn-del-stream" style="color:var(--danger); cursor:pointer; display:none; text-transform:none; font-weight:bold; font-size:0.8rem;" onclick="deleteCustomStream()">Delete Source</span>
         </div>
         <select id="inp-tx-stream" onchange="handleStreamChange()">
+          <option value="" disabled selected>-- Select Source --</option>
           <option value="Salary">Salary / Job</option>
           <option value="Agency">Agency / Freelance</option>
           <option value="Content">Content / YouTube</option>
@@ -413,7 +424,7 @@
     };
 
     let viewMonth = ""; let viewDateObj = new Date();
-    let isExpense = true; let selectedCat = CATEGORIES.exp[0]; let chartInstance = null;
+    let isExpense = true; let selectedCat = CATEGORIES.exp[0]; let chartInstance = null; let insightsChartInstance = null;
     let adjMode = 'set'; let jarAdjMode = 'set'; let isAssetTx = false;
 
     window.onload = () => {
@@ -429,7 +440,6 @@
         data = JSON.parse(saved);
         if (!data.config.customStreams) data.config.customStreams = [];
         if (!data.config.quickLogs) {
-            // Seed defaults if missing
             data.config.quickLogs = [
               { name: "Coffee", amt: 150, icon: "☕", cat: "food" },
               { name: "Lunch", amt: 250, icon: "🍔", cat: "food" },
@@ -591,7 +601,6 @@
         renderQuickLogList();
     }
 
-
     // --- JARS & WISHES ---
     function openNewJar(type) {
         document.getElementById('inp-jar-type').value = type;
@@ -710,7 +719,7 @@
         if(confirm(`Delete custom source "${sel.value}"?`)) {
             data.config.customStreams = data.config.customStreams.filter(s => s !== sel.value);
             saveData();
-            setTxType('inc'); // refresh dropdown
+            setTxType('inc'); 
         }
     }
 
@@ -750,7 +759,7 @@
                 if(!data.config.customStreams) data.config.customStreams = [];
                 data.config.customStreams.push(newStream.trim());
                 saveData(); 
-                setTxType('inc'); // refresh to show new option
+                setTxType('inc'); 
                 sel.value = newStream.trim();
                 handleStreamChange();
             } else { sel.selectedIndex = 0; handleStreamChange(); }
@@ -787,7 +796,11 @@
             if (a > data.liquidCash && !confirm("Warning: Asset costs more than Bank balance. Save anyway?")) return;
             data.liquidCash -= a;
         }
-        if (!isExpense) finalTag = document.getElementById('inp-tx-stream').value;
+        
+        if (!isExpense) {
+            finalTag = document.getElementById('inp-tx-stream').value;
+            if (!finalTag) return alert("Please select an Income Source."); // Validation block
+        }
 
         data.transactions.unshift({ id: Date.now(), title: t || selectedCat.name, amount: a, type: finalType, catIcon: selectedCat.icon, catId: finalTag, date: new Date().toISOString() });
         closeModal(null, 'modal-tx'); document.getElementById('inp-tx-title').value = ""; document.getElementById('inp-tx-amt').value = ""; saveData();
@@ -827,7 +840,6 @@
     function setSafePct(pct) { updateBudgetSlider(pct); }
     function togglePrivacy() { data.config.privacyMode = !data.config.privacyMode; saveData(); }
 
-    // FILE BACKUP SYSTEM
     function downloadBackupFile() {
         const text = JSON.stringify(data);
         const element = document.createElement('a');
@@ -850,8 +862,6 @@
         reader.readAsText(file);
     }
     
-    function exportData() { navigator.clipboard.writeText(JSON.stringify(data)).then(() => alert("Copied code to clipboard!")); }
-    function importData() { try { data = JSON.parse(document.getElementById('inp-import').value); saveData(); location.reload(); } catch (e) { alert("Invalid Code"); } }
     function hardReset() { if (confirm("Delete All?")) { localStorage.removeItem(VERSION); location.reload(); } }
 
     // --- UI ENGINE ---
@@ -894,6 +904,7 @@
       renderTimeline();
       renderBillList();
       updateRingChart(stats);
+      renderInsights(stats);
 
       const slider = document.getElementById('slider-safe'); if (slider) slider.value = String(clampInt(data.config.safePct, 0, 100));
       const lbl = document.getElementById('lbl-safe-pct'); if (lbl) lbl.innerText = `${clampInt(data.config.safePct, 0, 100)}%`;
@@ -1018,6 +1029,57 @@
       const lbl = document.getElementById('lbl-ring-pct'); if (lbl) lbl.innerText = `${pct}%`;
       if (chartInstance) chartInstance.destroy();
       chartInstance = new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [used, remain], backgroundColor: [usedC, remainC], borderWidth: 0, borderRadius: 20 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 450 } } });
+    }
+
+    function renderInsights(stats) {
+        const canvas = document.getElementById('chart-insights');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const expTxs = stats.txs.filter(t => t.type === 'exp');
+
+        const catTotals = {};
+        expTxs.forEach(t => { catTotals[t.catId] = (catTotals[t.catId] || 0) + t.amount; });
+
+        const bgColors = ['#00E5FF', '#FF3B30', '#FF9F0A', '#FFD60A', '#BF5AF2', '#30D158', '#8E8E93', '#FFFFFF'];
+        const listObj = Object.keys(catTotals).map(k => ({ cat: k, amt: catTotals[k] })).sort((a,b) => b.amt - a.amt);
+
+        const labels = listObj.map(item => {
+            const catInfo = CATEGORIES.exp.find(c => c.id === item.cat);
+            return catInfo ? catInfo.name : item.cat;
+        });
+        const dataVals = listObj.map(item => item.amt);
+
+        if (insightsChartInstance) insightsChartInstance.destroy();
+
+        if (dataVals.length === 0) {
+            insightsChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#333'], borderWidth: 0 }] }, options: { plugins: { legend: {display: false}, tooltip: {enabled: false} } } });
+            document.getElementById('insights-list').innerHTML = `<div style="text-align:center; color:#666; font-size:0.8rem; margin-top:20px;">No expenses to analyze yet.</div>`;
+            return;
+        }
+
+        insightsChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data: dataVals, backgroundColor: bgColors.slice(0, dataVals.length), borderWidth: 2, borderColor: '#111' }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: {color: '#fff', font: {family: 'Inter', size: 10}} } } }
+        });
+
+        const listHtml = document.getElementById('insights-list');
+        listHtml.innerHTML = "";
+        listObj.forEach((item, idx) => {
+            const catInfo = CATEGORIES.exp.find(c => c.id === item.cat) || { name: item.cat, icon: '💸' };
+            const pct = Math.round((item.amt / stats.expenses) * 100);
+            const color = bgColors[idx % bgColors.length];
+            listHtml.innerHTML += `
+                <div class="tx-item" style="border-left: 3px solid ${color};">
+                    <div class="icon-box" style="background:transparent; font-size:1.6rem;">${catInfo.icon}</div>
+                    <div style="flex:1;">
+                        <div class="bold">${catInfo.name}</div>
+                        <div class="label" style="color:#888;">${pct}% of spending</div>
+                    </div>
+                    <div class="mono bold">₱${item.amt.toLocaleString()}</div>
+                </div>
+            `;
+        });
     }
 
     function switchTab(viewId, navEl) { document.querySelectorAll('.view-section').forEach(el => { el.classList.add('hidden'); el.style.display = 'none'; }); document.getElementById(`view-${viewId}`).classList.remove('hidden'); document.getElementById(`view-${viewId}`).style.display = 'block'; document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); navEl.classList.add('active'); document.getElementById('main-scroll').scrollTop = 0; }
