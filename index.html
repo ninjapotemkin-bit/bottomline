@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Bottom Line v19 (Master Architecture)</title>
+  <title>Bottom Line v21 (Wealth & Customization Edition)</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -60,7 +60,7 @@
     .fab { position: fixed; left: 50%; transform: translateX(-50%); width: var(--fab-h); height: var(--fab-h); border-radius: 20px; background: var(--primary); color: #000; font-size: 2rem; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(0, 229, 255, 0.4); z-index: 102; cursor: pointer; border: 4px solid #000; bottom: calc(var(--nav-gap) + env(safe-area-inset-bottom) + 25px); }
     input, select { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 18px; border-radius: 14px; font-size: 1rem; margin-bottom: 16px; font-family: 'JetBrains Mono', monospace; }
     input:focus, select:focus { border-color: var(--primary); }
-    .btn { width: 100%; padding: 18px; border-radius: 16px; border: none; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+    .btn { width: 100%; padding: 18px; border-radius: 16px; border: none; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.1s; }
     .btn-primary { background: var(--primary); color: #000; } .btn-glass { background: #222; color: #fff; border: 1px solid #333; } .btn-danger { background: var(--danger); color: #fff; }
 
     .toggle-container { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 12px 18px; border-radius: 14px; border: 1px solid #333; margin-bottom: 16px; cursor: pointer; }
@@ -99,7 +99,6 @@
       </div>
       <div style="display:flex; gap:15px;">
         <div class="icon-btn" id="btn-privacy" onclick="togglePrivacy()">👁️</div>
-        <div class="icon-btn" onclick="openSettings()">⚙️</div>
       </div>
     </div>
 
@@ -113,7 +112,7 @@
               <div class="mono bold blur-sensitive" style="font-size: 2.8rem; color: var(--primary); margin: 5px 0;" id="disp-safe">₱0</div>
               <div class="label" style="margin-top:5px;">DAILY BURN RATE: <span class="mono blur-sensitive" style="color:#fff;" id="disp-daily">₱0</span></div>
             </div>
-            <div style="width:70px; height:70px; position:relative; cursor:pointer;" onclick="openSettings()" title="Set Budget Limit">
+            <div style="width:70px; height:70px; position:relative;">
               <canvas id="chart-ring"></canvas>
               <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:0.7rem; font-weight:bold; color:#666;" id="lbl-ring-pct">0%</div>
             </div>
@@ -148,26 +147,39 @@
           <div class="label" style="color:var(--gold);">TOTAL LIQUIDITY (BANK)</div>
           <div class="mono bold blur-sensitive" style="font-size: 2.5rem; color: var(--gold); margin:10px 0;" id="disp-total-liquid">₱0</div>
           <div class="stat-grid">
+            <div class="stat-box"><div class="label" style="color:var(--primary);">TRUE NET WORTH</div><div class="mono bold blur-sensitive" style="font-size:1.1rem; color:var(--primary);" id="disp-net-worth">₱0</div></div>
             <div class="stat-box"><div class="label" style="color:var(--success);">FREE CASH</div><div class="mono bold blur-sensitive" style="font-size:1.1rem; color:var(--success);" id="disp-free-cash">₱0</div></div>
-            <div class="stat-box"><div class="label" style="color:var(--purple);">FROZEN (ALL FUNDS)</div><div class="mono bold blur-sensitive" style="font-size:1.1rem; color:var(--purple);" id="disp-frozen-cash">₱0</div></div>
           </div>
           <div id="div-update-bank-btn">
             <button class="btn btn-glass" style="margin-top:20px; font-size:0.8rem;" onclick="openAdjustSavings()">Update Bank Balance</button>
           </div>
         </div>
-
+        
         <div class="section-title" style="color:var(--success);">TIER 1: PRIORITY FUNDS</div>
         <button class="btn btn-glass" style="margin-bottom:15px; border-style:dashed; color:var(--success); border-color:var(--success);" id="btn-new-priority" onclick="openNewJar('priority')">+ New Priority Fund</button>
         <div id="priority-grid" style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 30px;"></div>
 
         <div class="section-title" style="color:var(--purple);">TIER 2: WISH JARS</div>
         <button class="btn btn-glass" style="margin-bottom:15px; border-style:dashed; color:var(--purple); border-color:var(--purple);" id="btn-new-wish" onclick="openNewJar('wish')">+ New Target Wish</button>
-        <div id="jar-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;"></div>
+        <div id="jar-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px;"></div>
+
+        <div class="section-title" style="color:var(--danger);">DEBT & LIABILITIES</div>
+        <button class="btn btn-glass" style="margin-bottom:15px; border-style:dashed; color:var(--danger); border-color:var(--danger);" onclick="openNewDebt()">+ Add Liability</button>
+        <div id="debt-grid" style="display: grid; gap: 10px; margin-bottom: 30px;"></div>
 
         <div class="section-title" style="margin-top:40px;">ASSET LOCKER</div>
         <div id="asset-list"></div>
         <div class="section-title" style="margin-top:40px;">TROPHY ROOM</div>
         <div id="trophy-list"></div>
+      </div>
+
+      <div id="view-insights" class="view-section hidden">
+        <div class="card" style="padding: 15px;">
+            <div class="label">6-MONTH PERFORMANCE</div>
+            <canvas id="chart-insights" height="200"></canvas>
+        </div>
+        <div class="section-title">HUSTLE P&L (REVENUE BY SOURCE)</div>
+        <div id="pl-list"></div>
       </div>
 
       <div id="view-bills" class="view-section hidden">
@@ -178,20 +190,16 @@
         <button class="btn btn-glass" style="margin-top:20px; border-style:dashed;" onclick="openNewBill()">+ Add Bill</button>
       </div>
 
-      <div id="view-search" class="view-section hidden">
-        <input type="text" id="inp-search" placeholder="🔍 Search..." onkeyup="runSearch(this.value)">
-        <div id="search-results"></div>
-      </div>
-
     </div>
   </div>
 
   <div class="nav-island">
     <div class="nav-item active" onclick="switchTab('home', this)"><div class="nav-icon">🏠</div></div>
     <div class="nav-item" onclick="switchTab('savings', this)"><div class="nav-icon">🏦</div></div>
-    <div style="width:40px;"></div>
+    <div style="width:20px;"></div>
     <div class="nav-item" onclick="switchTab('bills', this)"><div class="nav-icon">🧾</div></div>
-    <div class="nav-item" onclick="switchTab('search', this)"><div class="nav-icon">🔍</div></div>
+    <div class="nav-item" onclick="switchTab('insights', this)"><div class="nav-icon">📊</div></div>
+    <div class="nav-item" onclick="openSettings()"><div class="nav-icon">⚙️</div></div>
   </div>
   <div class="fab" id="main-fab" onclick="openNewTx()">+</div>
 
@@ -277,12 +285,7 @@
       
       <div id="inc-stream-select" class="hidden" style="margin-bottom:15px;">
         <div class="label">INCOME SOURCE</div>
-        <select id="inp-tx-stream" onchange="handleCustomStream()">
-          <option value="Salary">Salary / Job</option>
-          <option value="Agency">Agency / Freelance</option>
-          <option value="Content">Content / YouTube</option>
-          <option value="_custom">+ Add Custom Source...</option>
-        </select>
+        <select id="inp-tx-stream" onchange="handleCustomStream()"></select>
       </div>
 
       <div class="cat-grid" id="cat-list"></div>
@@ -316,6 +319,16 @@
   <div class="modal-overlay" id="modal-settings" onclick="closeModal(event, 'modal-settings')">
     <div class="modal-sheet">
       <h2>Settings</h2>
+      
+      <div class="label" style="margin-top:10px;">MANAGE QUICK LOGS</div>
+      <div id="settings-presets-list" style="margin-bottom:10px; max-height:150px; overflow-y:auto; border:1px solid #333; padding:10px; border-radius:10px;"></div>
+      <div style="display:flex; gap:5px; margin-bottom:20px;">
+          <input type="text" id="inp-preset-name" placeholder="Name" style="margin-bottom:0; flex:1; padding:10px;">
+          <input type="number" id="inp-preset-amt" placeholder="₱" style="margin-bottom:0; width:70px; padding:10px;">
+          <input type="text" id="inp-preset-icon" placeholder="🍔" style="margin-bottom:0; width:50px; padding:10px; text-align:center;">
+          <button class="btn btn-glass" style="width:50px; padding:10px;" onclick="addPreset()">+</button>
+      </div>
+
       <div class="label">BUDGET SAFE LIMIT</div>
       <div class="preset-row" style="margin-bottom:15px;">
         <div class="chip" style="flex:1;" onclick="setSafePct(30)">30%</div>
@@ -340,15 +353,24 @@
   <div class="modal-overlay" id="modal-income" onclick="closeModal(event, 'modal-income')">
     <div class="modal-sheet">
       <h2>Fund Your Month</h2>
-      <p style="color:#666; margin-bottom:20px;">Choose how to fund your current budget.</p>
+      
       <div class="label">1. RECURRING BASELINE</div>
       <input type="text" id="inp-income-setting" placeholder="Monthly Base Income">
       <button class="btn btn-glass" onclick="saveIncome()">Set Baseline</button>
+      
       <div style="margin: 25px 0; border-top: 1px dashed #333;"></div>
+      
+      <div class="label">MANAGE INCOME SOURCES</div>
+      <div id="custom-stream-list" style="margin-bottom:15px; border:1px solid #333; padding:10px; border-radius:10px;"></div>
+      
+      <div style="margin: 25px 0; border-top: 1px dashed #333;"></div>
+
       <div class="label">2. PULL FROM SAVINGS</div>
       <input type="text" id="inp-transfer-amt" placeholder="Amount to withdraw (₱)">
       <button class="btn btn-primary" style="background:var(--warning); color:#000;" onclick="transferFromBank()">Transfer to Budget</button>
+
       <div style="margin: 25px 0; border-top: 1px dashed #333;"></div>
+
       <div class="label" style="color:var(--danger);">3. FIX TYPOS (FUNDING OVERRIDE)</div>
       <input type="text" id="inp-rollover-override" placeholder="Correct Rollover Amount (₱)">
       <button class="btn btn-glass" style="border-color:var(--danger); color:var(--danger);" onclick="overrideRollover()">Apply Correction</button>
@@ -375,27 +397,23 @@
         { id: 'ent', icon: '🎬', name: 'Ent' }, { id: 'health', icon: '❤️', name: 'Health' },
         { id: 'tech', icon: '💻', name: 'Tech' }, { id: 'misc', icon: '💸', name: 'Misc' }
       ],
-      inc: [
-        { id: 'sal', icon: '💰', name: 'Salary' }, { id: 'freelance', icon: '⚡', name: 'Freelance' },
-        { id: 'gift', icon: '🎁', name: 'Gift' }, { id: 'invest', icon: '📈', name: 'Invest' }
-      ]
+      inc: [{ id: 'income', icon: '💰', name: 'Income' }] // Streamlined since we use custom streams
     };
 
-    // UX PRESETS
-    const QUICK_PRESETS = [
-        { name: "Coffee", amt: 150, icon: "☕", cat: "food" },
-        { name: "Lunch", amt: 250, icon: "🍔", cat: "food" },
-        { name: "Gas", amt: 500, icon: "🚗", cat: "trans" },
-        { name: "Grab", amt: 300, icon: "🚕", cat: "trans" }
+    const DEFAULT_PRESETS = [
+        { name: "Coffee", amt: 150, icon: "☕" },
+        { name: "Lunch", amt: 250, icon: "🍔" },
+        { name: "Gas", amt: 500, icon: "🚗" },
+        { name: "Grab", amt: 300, icon: "🚕" }
     ];
 
     let data = {
-      config: { baseIncome: 0, safePct: 50, privacyMode: false, rollover: 0, customStreams: [] },
-      transactions: [], bills: [], jars: [], trophyRoom: [], history: [], liquidCash: 0, currentMonth: ""
+      config: { baseIncome: 0, safePct: 50, privacyMode: false, rollover: 0, customStreams: ["Salary", "Agency", "Content"], customPresets: null },
+      transactions: [], bills: [], jars: [], debts: [], trophyRoom: [], history: [], liquidCash: 0, currentMonth: ""
     };
 
     let viewMonth = ""; let viewDateObj = new Date();
-    let isExpense = true; let selectedCat = CATEGORIES.exp[0]; let chartInstance = null;
+    let isExpense = true; let selectedCat = CATEGORIES.exp[0]; let chartInstance = null; let chartInsights = null;
     let adjMode = 'set'; let jarAdjMode = 'set'; let isAssetTx = false;
 
     window.onload = () => {
@@ -409,10 +427,14 @@
       const saved = localStorage.getItem(VERSION);
       if (saved) {
         data = JSON.parse(saved);
-        if (!data.config.customStreams) data.config.customStreams = [];
-        // Upgrade legacy jars to include "type"
+        if (!data.config.customStreams) data.config.customStreams = ["Salary", "Agency", "Content"];
+        if (!data.config.customPresets) data.config.customPresets = DEFAULT_PRESETS;
+        if (!data.debts) data.debts = [];
         data.jars.forEach(j => { if(!j.type) j.type = 'wish'; }); 
-      } else { data.currentMonth = getMonthLabel(new Date()); }
+      } else { 
+          data.currentMonth = getMonthLabel(new Date()); 
+          data.config.customPresets = DEFAULT_PRESETS;
+      }
     }
 
     function saveData() { localStorage.setItem(VERSION, JSON.stringify(data)); renderUI(); }
@@ -436,13 +458,18 @@
       const dailyExp = budgetTxs.filter(t => t.type === 'exp').reduce((s, t) => s + t.amount, 0);
       const billTotal = data.bills.reduce((s, b) => s + b.amount, 0);
       const totalExpenses = dailyExp + billTotal;
-      const limit = totalIncome * (clampInt(data.config.safePct, 0, 100) / 100);
+
+      const safePct = clampInt(data.config.safePct, 0, 100);
+      const limit = totalIncome * (safePct / 100);
       const safe = limit - totalExpenses;
 
       const frozenCash = data.jars.reduce((s, j) => s + j.saved, 0);
+      const debtTotal = data.debts.reduce((s, d) => s + d.balance, 0);
+      
       const freeCash = snapshotLiquid - frozenCash;
+      const netWorth = snapshotLiquid - debtTotal; // Assets minus Liabilities
 
-      return { income: totalIncome, expenses: totalExpenses, limit, safe, netChange: totalIncome - totalExpenses, liquid: snapshotLiquid, frozen: frozenCash, free: freeCash, txs: activeTxs };
+      return { income: totalIncome, expenses: totalExpenses, limit, safe, liquid: snapshotLiquid, frozen: frozenCash, free: freeCash, net: netWorth, txs: activeTxs };
     }
 
     function calculateRunway() {
@@ -461,30 +488,20 @@
         return (data.liquidCash / (totalSpend / monthsCounted)).toFixed(1);
     }
 
-    // --- WATERFALL INTERCEPT ---
     function runVaultIntercept(amountAdded) {
       if (amountAdded <= 0 || viewMonth !== data.currentMonth) return;
-      let remainingPool = amountAdded;
-      let interceptedTotal = 0;
+      let remainingPool = amountAdded; let interceptedTotal = 0;
 
-      // Tier 1: Priority Funds
       data.jars.filter(j => j.type === 'priority').forEach(jar => {
-          if (remainingPool <= 0) return;
-          let pull = 0;
-          if (jar.ruleType === 'pct' && jar.ruleAmt > 0) pull = amountAdded * (jar.ruleAmt / 100);
-          else if (jar.ruleType === 'fixed' && jar.ruleAmt > 0) pull = jar.ruleAmt;
-          pull = Math.min(pull, remainingPool);
-          if (pull > 0) { jar.saved += pull; remainingPool -= pull; interceptedTotal += pull; }
+          if (remainingPool <= 0) return; let pull = 0;
+          if (jar.ruleType === 'pct' && jar.ruleAmt > 0) pull = amountAdded * (jar.ruleAmt / 100); else if (jar.ruleType === 'fixed' && jar.ruleAmt > 0) pull = jar.ruleAmt;
+          pull = Math.min(pull, remainingPool); if (pull > 0) { jar.saved += pull; remainingPool -= pull; interceptedTotal += pull; }
       });
 
-      // Tier 2: Wish Jars
       data.jars.filter(j => j.type === 'wish').forEach(jar => {
-          if (remainingPool <= 0 || jar.saved >= jar.target) return;
-          let pull = 0;
-          if (jar.ruleType === 'pct' && jar.ruleAmt > 0) pull = remainingPool * (jar.ruleAmt / 100); // Wishes take % of LEFTOVERS
-          else if (jar.ruleType === 'fixed' && jar.ruleAmt > 0) pull = jar.ruleAmt;
-          pull = Math.min(pull, jar.target - jar.saved);
-          pull = Math.min(pull, remainingPool);
+          if (remainingPool <= 0 || jar.saved >= jar.target) return; let pull = 0;
+          if (jar.ruleType === 'pct' && jar.ruleAmt > 0) pull = remainingPool * (jar.ruleAmt / 100); else if (jar.ruleType === 'fixed' && jar.ruleAmt > 0) pull = jar.ruleAmt;
+          pull = Math.min(pull, jar.target - jar.saved); pull = Math.min(pull, remainingPool);
           if (pull > 0) { jar.saved += pull; remainingPool -= pull; interceptedTotal += pull; }
       });
 
@@ -495,8 +512,9 @@
       const realMonth = getMonthLabel(new Date());
       if (data.currentMonth !== realMonth) {
         viewMonth = data.currentMonth; const stats = calculateStats();
-        document.getElementById('disp-settle-unspent').innerText = `₱ ${Math.max(0, stats.safe).toLocaleString()}`;
-        document.getElementById('inp-settle-save').value = Math.max(0, stats.safe); document.getElementById('inp-settle-roll').value = 0;
+        const unspent = Math.max(0, stats.safe);
+        document.getElementById('disp-settle-unspent').innerText = `₱ ${unspent.toLocaleString()}`;
+        document.getElementById('inp-settle-save').value = unspent; document.getElementById('inp-settle-roll').value = 0;
         openModal('modal-settle');
       }
     }
@@ -506,116 +524,100 @@
       const toSave = parseFloat(document.getElementById('inp-settle-save').value) || 0;
       const toRoll = parseFloat(document.getElementById('inp-settle-roll').value) || 0;
 
-      data.history.push({ id: data.currentMonth, txs: [...data.transactions], stats: { income: data.config.baseIncome + (data.config.rollover || 0), bankSnapshot: data.liquidCash } });
+      data.history.push({ id: data.currentMonth, txs: [...data.transactions], stats: { income: data.config.baseIncome + (data.config.rollover || 0), expenses: calculateStats().expenses, bankSnapshot: data.liquidCash } });
       data.liquidCash += toSave; data.config.rollover = toRoll;
       if (toSave > 0) runVaultIntercept(toSave);
       data.transactions = []; data.currentMonth = realMonth; viewMonth = realMonth;
       closeModal(null, 'modal-settle'); saveData();
     }
 
-    // --- QUICK ADD ---
-    function logQuickTx(name, amt, catId, icon) {
-        data.transactions.unshift({ id: Date.now(), title: name, amount: amt, type: 'exp', catIcon: icon, catId: catId, date: new Date().toISOString() });
+    // --- QUICK PRESETS (EDITABLE) ---
+    function logQuickTx(name, amt, icon) {
+        data.transactions.unshift({ id: Date.now(), title: name, amount: amt, type: 'exp', catIcon: icon, catId: 'misc', date: new Date().toISOString() });
         saveData();
     }
+    
+    function addPreset() {
+        const n = document.getElementById('inp-preset-name').value.trim();
+        const a = parseFloat(document.getElementById('inp-preset-amt').value);
+        const i = document.getElementById('inp-preset-icon').value.trim() || '💸';
+        if(n && a) {
+            data.config.customPresets.push({name: n, amt: a, icon: i});
+            document.getElementById('inp-preset-name').value = ""; document.getElementById('inp-preset-amt').value = "";
+            saveData(); openSettings(); // refresh list
+        }
+    }
+    
+    function delPreset(index) { data.config.customPresets.splice(index, 1); saveData(); openSettings(); }
 
     // --- JARS & WISHES ---
     function openNewJar(type) {
         document.getElementById('inp-jar-type').value = type;
         if (type === 'priority') {
-            document.getElementById('modal-jar-header').innerText = "New Priority Fund";
-            document.getElementById('div-jar-target-container').style.display = 'none'; // Priority has no target
-            document.getElementById('btn-save-new-jar').style.background = "var(--success)";
-            document.getElementById('lbl-jar-rule-desc').innerText = "Priority funds get first dibs. They intercept money before Wish Jars.";
+            document.getElementById('modal-jar-header').innerText = "New Priority Fund"; document.getElementById('div-jar-target-container').style.display = 'none'; document.getElementById('btn-save-new-jar').style.background = "var(--success)"; document.getElementById('lbl-jar-rule-desc').innerText = "Priority funds get first dibs. They intercept money before Wish Jars.";
         } else {
-            document.getElementById('modal-jar-header').innerText = "New Target Wish";
-            document.getElementById('div-jar-target-container').style.display = 'block';
-            document.getElementById('btn-save-new-jar').style.background = "var(--purple)";
-            document.getElementById('lbl-jar-rule-desc').innerText = "Wishes get funded by whatever is left over after Priority funds take their cut.";
+            document.getElementById('modal-jar-header').innerText = "New Target Wish"; document.getElementById('div-jar-target-container').style.display = 'block'; document.getElementById('btn-save-new-jar').style.background = "var(--purple)"; document.getElementById('lbl-jar-rule-desc').innerText = "Wishes get funded by whatever is left over after Priority funds take their cut.";
         }
         openModal('modal-jar');
     }
 
     function saveJar() {
-      const type = document.getElementById('inp-jar-type').value;
-      const n = document.getElementById('inp-jar-name').value.trim();
-      const t = parseFloat(document.getElementById('inp-jar-target').value) || 0;
-      const goalDate = document.getElementById('inp-jar-date').value;
-      const rType = document.getElementById('inp-jar-ruletype').value;
-      const rAmt = parseFloat(document.getElementById('inp-jar-ruleamt').value) || 0;
-
-      if (n) {
-        data.jars.push({ type: type, name: n, target: type==='priority'? null : t, saved: 0, dateCreated: new Date().toISOString(), goalDate: goalDate || null, ruleType: rType, ruleAmt: rAmt });
-        closeModal(null, 'modal-jar'); saveData();
-      }
+      const type = document.getElementById('inp-jar-type').value; const n = document.getElementById('inp-jar-name').value.trim(); const t = parseFloat(document.getElementById('inp-jar-target').value) || 0; const goalDate = document.getElementById('inp-jar-date').value; const rType = document.getElementById('inp-jar-ruletype').value; const rAmt = parseFloat(document.getElementById('inp-jar-ruleamt').value) || 0;
+      if (n) { data.jars.push({ type: type, name: n, target: type==='priority'? null : t, saved: 0, dateCreated: new Date().toISOString(), goalDate: goalDate || null, ruleType: rType, ruleAmt: rAmt }); closeModal(null, 'modal-jar'); saveData(); }
     }
 
     function openManageJar(index) {
         if (viewMonth !== data.currentMonth) return alert("You can only edit funds in the current month.");
-        const jar = data.jars[index];
-        document.getElementById('manage-jar-index').value = index;
-        document.getElementById('manage-jar-title').innerText = `Manage: ${jar.name}`;
-        
-        if (jar.type === 'priority') {
-            document.getElementById('div-manage-target-container').style.display = 'none';
-        } else {
-            document.getElementById('div-manage-target-container').style.display = 'block';
-            document.getElementById('inp-manage-jar-target').value = jar.target;
-            document.getElementById('inp-manage-jar-date').value = jar.goalDate || "";
-        }
-        
-        document.getElementById('inp-manage-jar-ruletype').value = jar.ruleType || 'none';
-        document.getElementById('inp-manage-jar-ruleamt').value = jar.ruleAmt || '';
-        setJarAdjMode('set'); document.getElementById('inp-manage-jar-saved').value = jar.saved;
-        openModal('modal-manage-jar');
+        const jar = data.jars[index]; document.getElementById('manage-jar-index').value = index; document.getElementById('manage-jar-title').innerText = `Manage: ${jar.name}`;
+        if (jar.type === 'priority') { document.getElementById('div-manage-target-container').style.display = 'none'; } 
+        else { document.getElementById('div-manage-target-container').style.display = 'block'; document.getElementById('inp-manage-jar-target').value = jar.target; document.getElementById('inp-manage-jar-date').value = jar.goalDate || ""; }
+        document.getElementById('inp-manage-jar-ruletype').value = jar.ruleType || 'none'; document.getElementById('inp-manage-jar-ruleamt').value = jar.ruleAmt || '';
+        setJarAdjMode('set'); document.getElementById('inp-manage-jar-saved').value = jar.saved; openModal('modal-manage-jar');
     }
 
     function setJarAdjMode(mode) {
-      jarAdjMode = mode;
-      document.getElementById('btn-jar-adj-add').style.borderColor = mode === 'add' ? 'var(--primary)' : 'transparent';
-      document.getElementById('btn-jar-adj-sub').style.borderColor = mode === 'sub' ? 'var(--primary)' : 'transparent';
-      document.getElementById('btn-jar-adj-set').style.borderColor = mode === 'set' ? 'var(--primary)' : 'transparent';
-      const idx = document.getElementById('manage-jar-index').value;
-      if (idx !== "") { document.getElementById('inp-manage-jar-saved').value = mode === 'set' ? data.jars[idx].saved : ""; }
+      jarAdjMode = mode; document.getElementById('btn-jar-adj-add').style.borderColor = mode === 'add' ? 'var(--primary)' : 'transparent'; document.getElementById('btn-jar-adj-sub').style.borderColor = mode === 'sub' ? 'var(--primary)' : 'transparent'; document.getElementById('btn-jar-adj-set').style.borderColor = mode === 'set' ? 'var(--primary)' : 'transparent';
+      const idx = document.getElementById('manage-jar-index').value; if (idx !== "") { document.getElementById('inp-manage-jar-saved').value = mode === 'set' ? data.jars[idx].saved : ""; }
     }
 
     function updateJar() {
         const idx = document.getElementById('manage-jar-index').value; if (idx === "") return;
         const jar = data.jars[idx]; const stats = calculateStats();
+        if (jar.type === 'wish') { const newTarget = parseFloat(document.getElementById('inp-manage-jar-target').value); if (newTarget) jar.target = newTarget; jar.goalDate = document.getElementById('inp-manage-jar-date').value || null; }
+        jar.ruleType = document.getElementById('inp-manage-jar-ruletype').value; jar.ruleAmt = parseFloat(document.getElementById('inp-manage-jar-ruleamt').value) || 0;
+        const rawAmt = document.getElementById('inp-manage-jar-saved').value; let adjAmt = 0; try { adjAmt = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
         
-        if (jar.type === 'wish') {
-            const newTarget = parseFloat(document.getElementById('inp-manage-jar-target').value);
-            if (newTarget) jar.target = newTarget;
-            jar.goalDate = document.getElementById('inp-manage-jar-date').value || null;
-        }
-
-        jar.ruleType = document.getElementById('inp-manage-jar-ruletype').value;
-        jar.ruleAmt = parseFloat(document.getElementById('inp-manage-jar-ruleamt').value) || 0;
-
-        const rawAmt = document.getElementById('inp-manage-jar-saved').value;
-        let adjAmt = 0; try { adjAmt = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
         if (!isNaN(adjAmt) && document.getElementById('inp-manage-jar-saved').value !== "") {
             let newSaved = jar.saved; let diff = 0;
-            if (jarAdjMode === 'add') { diff = adjAmt; newSaved += adjAmt; } 
-            else if (jarAdjMode === 'sub') { diff = -adjAmt; newSaved -= adjAmt; } 
-            else { diff = adjAmt - jar.saved; newSaved = adjAmt; }
+            if (jarAdjMode === 'add') { diff = adjAmt; newSaved += adjAmt; } else if (jarAdjMode === 'sub') { diff = -adjAmt; newSaved -= adjAmt; } else { diff = adjAmt - jar.saved; newSaved = adjAmt; }
             if (diff > 0 && diff > stats.free) return alert("Not enough Free Cash!");
-            if (newSaved < 0) newSaved = 0;
-            jar.saved = newSaved;
+            if (newSaved < 0) newSaved = 0; jar.saved = newSaved;
         }
 
         if (jar.type === 'wish' && jar.saved >= jar.target) {
-            if (confirm(`CLAIM REWARD: Buy "${jar.name}" for ₱${jar.saved.toLocaleString()}?`)) {
-                data.liquidCash -= jar.saved; data.trophyRoom.unshift({ ...jar, dateBought: new Date().toISOString() }); data.jars.splice(idx, 1);
-                closeModal(null, 'modal-manage-jar'); saveData(); return;
-            }
+            if (confirm(`CLAIM REWARD: Buy "${jar.name}" for ₱${jar.saved.toLocaleString()}?`)) { data.liquidCash -= jar.saved; data.trophyRoom.unshift({ ...jar, dateBought: new Date().toISOString() }); data.jars.splice(idx, 1); closeModal(null, 'modal-manage-jar'); saveData(); return; }
         }
         closeModal(null, 'modal-manage-jar'); saveData();
     }
 
-    function deleteJarFromManage() {
-        const idx = document.getElementById('manage-jar-index').value;
-        if (idx !== "" && confirm("Cancel this fund? Saved cash will remain in Bank.")) { data.jars.splice(idx, 1); closeModal(null, 'modal-manage-jar'); saveData(); }
+    function deleteJarFromManage() { const idx = document.getElementById('manage-jar-index').value; if (idx !== "" && confirm("Cancel this fund? Saved cash will remain in Bank.")) { data.jars.splice(idx, 1); closeModal(null, 'modal-manage-jar'); saveData(); } }
+    
+    // --- DEBTS ---
+    function openNewDebt() {
+      const name = prompt("Name of liability (e.g. Credit Card):");
+      const balance = prompt("Current balance owed (₱):");
+      if(name && balance) { data.debts.push({ name, balance: parseFloat(balance) }); saveData(); }
+    }
+
+    function payDebt(i) {
+      const amt = parseFloat(prompt(`Pay off ${data.debts[i].name}? Enter payment:`));
+      if(amt) {
+          if (amt > data.liquidCash) return alert("Not enough cash in bank to make this payment.");
+          data.liquidCash -= amt; data.debts[i].balance -= amt; 
+          data.transactions.unshift({ id: Date.now(), title: `Payment: ${data.debts[i].name}`, amount: amt, type: 'exp', catIcon: '🏦', catId: 'Debt', date: new Date().toISOString() });
+          if(data.debts[i].balance <= 0) { alert(`${data.debts[i].name} paid off!`); data.debts.splice(i,1); }
+          saveData(); 
+      }
     }
 
     // --- TX & MODALS ---
@@ -625,15 +627,8 @@
       const bS = document.getElementById('btn-save-tx'); const assetTog = document.getElementById('asset-toggle-container');
       const streamSel = document.getElementById('inc-stream-select');
       
-      // Setup Custom Streams UI
       const sel = document.getElementById('inp-tx-stream');
-      Array.from(sel.options).forEach(opt => { if(opt.className === 'custom-opt') opt.remove(); });
-      if(data.config.customStreams) {
-          data.config.customStreams.forEach(cs => {
-              const opt = document.createElement('option'); opt.value = cs; opt.text = cs; opt.className = 'custom-opt';
-              sel.insertBefore(opt, sel.lastElementChild);
-          });
-      }
+      sel.innerHTML = data.config.customStreams.map(s => `<option value="${s}">${s}</option>`).join('') + `<option value="_custom">+ Add Custom Source...</option>`;
 
       if (isExpense) {
         bE.style.background = "var(--danger)"; bE.style.color = "white"; bI.style.background = "transparent"; bI.style.color = "#666";
@@ -651,28 +646,20 @@
         const sel = document.getElementById('inp-tx-stream');
         if (sel.value === '_custom') {
             const newStream = prompt("Enter new custom income source:");
-            if (newStream && newStream.trim() !== "") {
-                if(!data.config.customStreams) data.config.customStreams = [];
-                data.config.customStreams.push(newStream.trim());
-                saveData(); // Will trigger render and close modal, user just needs to reopen.
-                alert("Custom stream added. Re-open New Entry to use it.");
-                closeModal(null, 'modal-tx');
-            } else { sel.selectedIndex = 0; }
+            if (newStream && newStream.trim() !== "") { data.config.customStreams.push(newStream.trim()); saveData(); alert("Stream added. Re-open New Entry."); closeModal(null, 'modal-tx'); } 
+            else { sel.selectedIndex = 0; }
         }
     }
 
     function toggleAssetMode() {
-        if (!isExpense) return;
-        isAssetTx = !isAssetTx; const tog = document.getElementById('asset-toggle-container'); const bS = document.getElementById('btn-save-tx');
+        if (!isExpense) return; isAssetTx = !isAssetTx; const tog = document.getElementById('asset-toggle-container'); const bS = document.getElementById('btn-save-tx');
         if (isAssetTx) { tog.classList.add('active'); bS.innerText = "SAVE ASSET"; bS.className = "btn btn-claim"; } 
         else { tog.classList.remove('active'); bS.innerText = "SAVE EXPENSE"; bS.className = "btn btn-danger"; }
     }
 
     function renderCatGrid() {
-      const grid = document.getElementById('cat-list'); if (!grid) return;
-      const cats = isExpense ? CATEGORIES.exp : CATEGORIES.inc;
-      if (!selectedCat || !cats.some(c => c.id === selectedCat.id)) selectedCat = cats[0];
-      grid.innerHTML = "";
+      const grid = document.getElementById('cat-list'); if (!grid) return; const cats = isExpense ? CATEGORIES.exp : CATEGORIES.inc;
+      if (!selectedCat || !cats.some(c => c.id === selectedCat.id)) selectedCat = cats[0]; grid.innerHTML = "";
       cats.forEach(cat => {
         const el = document.createElement('div'); el.className = 'cat-opt' + (selectedCat.id === cat.id ? ' selected' : '');
         el.innerText = cat.icon; el.title = cat.name; el.onclick = () => { selectedCat = cat; renderCatGrid(); }; grid.appendChild(el);
@@ -680,19 +667,11 @@
     }
 
     function saveTransaction() {
-      const t = document.getElementById('inp-tx-title').value.trim();
-      const rawAmt = document.getElementById('inp-tx-amt').value;
-      let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch (e) { return alert("Invalid math."); }
-
+      const t = document.getElementById('inp-tx-title').value.trim(); const rawAmt = document.getElementById('inp-tx-amt').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch (e) { return alert("Invalid math."); }
       if (a && !isNaN(a)) {
         let finalType = isExpense ? 'exp' : 'inc'; let finalTag = selectedCat.id;
-        if (isExpense && isAssetTx) {
-            finalType = 'asset';
-            if (a > data.liquidCash && !confirm("Warning: Asset costs more than Bank balance. Save anyway?")) return;
-            data.liquidCash -= a;
-        }
+        if (isExpense && isAssetTx) { finalType = 'asset'; if (a > data.liquidCash && !confirm("Warning: Asset costs more than Bank balance. Save anyway?")) return; data.liquidCash -= a; }
         if (!isExpense) finalTag = document.getElementById('inp-tx-stream').value;
-
         data.transactions.unshift({ id: Date.now(), title: t || selectedCat.name, amount: a, type: finalType, catIcon: selectedCat.icon, catId: finalTag, date: new Date().toISOString() });
         closeModal(null, 'modal-tx'); document.getElementById('inp-tx-title').value = ""; document.getElementById('inp-tx-amt').value = ""; saveData();
       }
@@ -702,10 +681,7 @@
     function deleteBill(i) { if (confirm("Remove bill?")) { data.bills.splice(i, 1); saveData(); } }
 
     function setAdjMode(mode) {
-      adjMode = mode;
-      document.getElementById('btn-adj-add').style.borderColor = mode === 'add' ? 'var(--primary)' : 'transparent';
-      document.getElementById('btn-adj-sub').style.borderColor = mode === 'sub' ? 'var(--primary)' : 'transparent';
-      document.getElementById('btn-adj-set').style.borderColor = mode === 'set' ? 'var(--primary)' : 'transparent';
+      adjMode = mode; document.getElementById('btn-adj-add').style.borderColor = mode === 'add' ? 'var(--primary)' : 'transparent'; document.getElementById('btn-adj-sub').style.borderColor = mode === 'sub' ? 'var(--primary)' : 'transparent'; document.getElementById('btn-adj-set').style.borderColor = mode === 'set' ? 'var(--primary)' : 'transparent';
     }
 
     function saveAdjustment() {
@@ -731,31 +707,18 @@
     function setSafePct(pct) { updateBudgetSlider(pct); }
     function togglePrivacy() { data.config.privacyMode = !data.config.privacyMode; saveData(); }
 
-    // FILE BACKUP SYSTEM
     function downloadBackupFile() {
-        const text = JSON.stringify(data);
         const element = document.createElement('a');
-        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(JSON.stringify(data)));
         element.setAttribute('download', `BottomLine_Backup_${new Date().toLocaleDateString().replace(/\//g,'-')}.txt`);
-        element.style.display = 'none';
-        document.body.appendChild(element);
-        element.click();
-        document.body.removeChild(element);
+        element.style.display = 'none'; document.body.appendChild(element); element.click(); document.body.removeChild(element);
     }
-
     function handleFileRestore(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+        const file = event.target.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(e) {
-            try { const importedData = JSON.parse(e.target.result); data = importedData; saveData(); alert("Restore Successful!"); location.reload(); } 
-            catch(err) { alert("Invalid backup file."); }
-        };
+        reader.onload = function(e) { try { data = JSON.parse(e.target.result); saveData(); alert("Restore Successful!"); location.reload(); } catch(err) { alert("Invalid backup file."); } };
         reader.readAsText(file);
     }
-    
-    function exportData() { navigator.clipboard.writeText(JSON.stringify(data)).then(() => alert("Copied code to clipboard!")); }
-    function importData() { try { data = JSON.parse(document.getElementById('inp-import').value); saveData(); location.reload(); } catch (e) { alert("Invalid Code"); } }
     function hardReset() { if (confirm("Delete All?")) { localStorage.removeItem(VERSION); location.reload(); } }
 
     // --- UI ENGINE ---
@@ -765,8 +728,6 @@
       document.getElementById('lbl-month-display').innerText = viewMonth;
       document.getElementById('main-fab').style.display = isCurrentMonth ? 'flex' : 'none';
       document.getElementById('div-update-bank-btn').style.display = isCurrentMonth ? 'block' : 'none';
-      document.getElementById('btn-new-priority').style.display = isCurrentMonth ? 'block' : 'none';
-      document.getElementById('btn-new-wish').style.display = isCurrentMonth ? 'block' : 'none';
 
       const blurElements = document.querySelectorAll('.blur-sensitive');
       if (data.config.privacyMode) { blurElements.forEach(el => el.classList.add('active')); document.getElementById('btn-privacy').classList.add('active'); } 
@@ -781,20 +742,23 @@
       
       document.getElementById('disp-income-val').innerText = `₱ ${stats.income.toLocaleString()}`;
       document.getElementById('disp-total-exp').innerText = `₱ ${stats.expenses.toLocaleString()}`;
-      document.getElementById('disp-runway').innerText = calculateRunway();
+      document.getElementById('disp-runway').innerText = calculateRunway() + " mo";
 
       const safeText = document.getElementById('disp-safe');
       if (stats.safe < 0) safeText.style.color = "var(--danger)"; else if (stats.limit > 0 && stats.safe < (stats.limit * 0.2)) safeText.style.color = "var(--warning)"; else safeText.style.color = "var(--primary)";
 
       document.getElementById('disp-total-liquid').innerText = `₱ ${stats.liquid.toLocaleString()}`;
+      document.getElementById('disp-net-worth').innerText = `₱ ${stats.net.toLocaleString()}`;
       document.getElementById('disp-free-cash').innerText = `₱ ${stats.free.toLocaleString()}`;
       document.getElementById('disp-frozen-cash').innerText = `₱ ${stats.frozen.toLocaleString()}`;
 
       renderQuickPresets();
       renderJarList();
+      renderDebtList();
       renderTrophyList();
       renderAssetList(stats.txs);
       renderTxList(stats.txs);
+      if(isCurrentMonth) renderInsights();
       renderTimeline();
       renderBillList();
       updateRingChart(stats);
@@ -807,8 +771,8 @@
         const row = document.getElementById('quick-presets');
         if(viewMonth !== data.currentMonth) { row.style.display = 'none'; return; }
         row.style.display = 'flex'; row.innerHTML = "";
-        QUICK_PRESETS.forEach(p => {
-            row.innerHTML += `<div class="chip" onclick="logQuickTx('${p.name}', ${p.amt}, '${p.cat}', '${p.icon}')">${p.icon} ${p.name} ₱${p.amt}</div>`;
+        data.config.customPresets.forEach(p => {
+            row.innerHTML += `<div class="chip" onclick="logQuickTx('${p.name}', ${p.amt}, '${p.icon}')">${p.icon} ${p.name} ₱${p.amt}</div>`;
         });
     }
 
@@ -856,6 +820,17 @@
       });
     }
 
+    function renderDebtList() {
+      const grid = document.getElementById('debt-grid');
+      if(data.debts.length === 0) { grid.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No active liabilities.</div>`; return; }
+      grid.innerHTML = data.debts.map((d, i) => `
+        <div class="tx-item" style="border-left:4px solid var(--danger); background:#1a1111; cursor:pointer;" onclick="payDebt(${i})">
+          <div style="flex:1"><div class="bold">${d.name}</div><div class="label">TAP TO PAY</div></div>
+          <div class="mono bold text-red">₱${d.balance.toLocaleString()}</div>
+        </div>
+      `).join('');
+    }
+
     function renderTrophyList() {
       const list = document.getElementById('trophy-list'); list.innerHTML = "";
       if (data.trophyRoom.length === 0) { list.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No completed wishes yet.</div>`; return; }
@@ -894,6 +869,37 @@
       });
     }
 
+    function renderInsights() {
+      const ctx = document.getElementById('chart-insights').getContext('2d');
+      // Get up to last 5 months + current
+      const histSlice = data.history.slice(-5);
+      const labels = histSlice.map(h => h.id.split(' ')[0]).concat(["This Mo"]);
+      const incData = histSlice.map(h => h.stats.income || 0).concat([calculateStats().income]);
+      const expData = histSlice.map(h => h.stats.expenses || 0).concat([calculateStats().expenses]);
+
+      if(chartInsights) chartInsights.destroy();
+      chartInsights = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{label:'Income', data:incData, backgroundColor:'#00E5FF', borderRadius:4}, {label:'Expenses', data:expData, backgroundColor:'#FF3B30', borderRadius:4}]},
+        options: { plugins: {legend: {display:false}}, scales: {y: {display:false, grid:{display:false}}, x: {grid: {display:false, color:'#222'}}}}
+      });
+
+      // P&L Logic (Total Revenue by custom tag)
+      const streams = {};
+      data.transactions.forEach(t => { if(t.type==='inc' && t.catId !== 'Transfer') streams[t.catId] = (streams[t.catId] || 0) + t.amount; });
+      
+      const plList = document.getElementById('pl-list');
+      if (Object.keys(streams).length === 0) { plList.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No revenue streams tracked yet.</div>`; }
+      else {
+          plList.innerHTML = Object.entries(streams).map(([name, val]) => `
+            <div class="tx-item" style="background:#0a1a1a; border-left:3px solid var(--primary);">
+              <div style="flex:1"><div class="bold">${name}</div></div>
+              <div class="mono bold text-teal">₱${val.toLocaleString()}</div>
+            </div>
+          `).join('');
+      }
+    }
+
     function renderTimeline() {
       const container = document.getElementById('timeline-scroll'); container.innerHTML = ""; const today = new Date().getDate();
       for (let i = 1; i <= 31; i++) {
@@ -921,12 +927,38 @@
       chartInstance = new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [used, remain], backgroundColor: [usedC, remainC], borderWidth: 0, borderRadius: 20 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 450 } } });
     }
 
-    function switchTab(viewId, navEl) { document.querySelectorAll('.view-section').forEach(el => { el.classList.add('hidden'); el.style.display = 'none'; }); document.getElementById(`view-${viewId}`).classList.remove('hidden'); document.getElementById(`view-${viewId}`).style.display = 'block'; document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); navEl.classList.add('active'); document.getElementById('main-scroll').scrollTop = 0; }
+    function switchTab(viewId, navEl) { document.querySelectorAll('.view-section').forEach(el => { el.classList.add('hidden'); el.style.display = 'none'; }); document.getElementById(`view-${viewId}`).classList.remove('hidden'); document.getElementById(`view-${viewId}`).style.display = 'block'; document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); navEl.classList.add('active'); document.getElementById('main-scroll').scrollTop = 0; if(viewId === 'insights') renderInsights(); }
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(e, id) { if (!e || e.target.id === id) document.getElementById(id).classList.remove('open'); }
     function openNewTx() { isAssetTx = false; renderCatGrid(); setTxType(isExpense ? 'exp' : 'inc'); openModal('modal-tx'); }
-    function openSettings() { const pct = clampInt(data.config.safePct, 0, 100); const s = document.getElementById('slider-safe'); const l = document.getElementById('lbl-safe-pct'); if (s) s.value = String(pct); if (l) l.innerText = `${pct}%`; openModal('modal-settings'); }
-    function openIncomeModal() { if (viewMonth !== data.currentMonth) return alert("Edit funding in current month only."); document.getElementById('inp-income-setting').value = data.config.baseIncome || ""; document.getElementById('inp-rollover-override').value = data.config.rollover || ""; openModal('modal-income'); }
+    function openSettings() { 
+        const pct = clampInt(data.config.safePct, 0, 100); const s = document.getElementById('slider-safe'); const l = document.getElementById('lbl-safe-pct');
+        if (s) s.value = String(pct); if (l) l.innerText = `${pct}%`; 
+        
+        // Populate manage presets
+        document.getElementById('settings-presets-list').innerHTML = data.config.customPresets.map((p,i) => `
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+                <span>${p.icon} ${p.name} (₱${p.amt})</span> <span onclick="delPreset(${i})" style="color:var(--danger); cursor:pointer;">✕</span>
+            </div>
+        `).join('');
+        
+        openModal('modal-settings'); 
+    }
+    
+    function openIncomeModal() { 
+      if (viewMonth !== data.currentMonth) return alert("Edit funding in current month only."); 
+      document.getElementById('inp-income-setting').value = data.config.baseIncome || ""; 
+      document.getElementById('inp-rollover-override').value = data.config.rollover || ""; 
+      
+      document.getElementById('custom-stream-list').innerHTML = data.config.customStreams.map((s,i) => `
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">${s} <span onclick="removeStream(${i})" style="color:var(--danger); cursor:pointer;">✕</span></div>
+      `).join('');
+      
+      openModal('modal-income'); 
+    }
+    
+    function removeStream(i) { data.config.customStreams.splice(i,1); openIncomeModal(); saveData(); }
+
     function openNewBill() { openModal('modal-bill'); }
     function openAdjustSavings() { openModal('modal-adjust'); }
 
