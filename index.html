@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Bottom Line v19 (Master Architecture)</title>
+  <title>Bottom Line v20 (Master Architecture)</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -81,7 +81,7 @@
 
     .preset-row { display: flex; gap: 10px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
     .preset-row::-webkit-scrollbar { display: none; }
-    .chip { flex: 0 0 auto; padding: 10px 15px; border-radius: 14px; background: #1f1f1f; border: 1px solid #333; color: #ddd; font-weight: 800; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
+    .chip { flex: 0 0 auto; padding: 10px 15px; border-radius: 14px; background: #1f1f1f; border: 1px solid #333; color: #ddd; font-weight: 800; font-size: 0.85rem; cursor: pointer; white-space: nowrap; display:flex; align-items:center; gap:5px;}
     .chip:active { transform: scale(0.98); }
 
     .jar-cancel-btn { position: absolute; top: 12px; right: 15px; color: #888; cursor: pointer; font-size: 1.2rem; z-index: 10; }
@@ -99,6 +99,7 @@
       </div>
       <div style="display:flex; gap:15px;">
         <div class="icon-btn" id="btn-privacy" onclick="togglePrivacy()">👁️</div>
+        <div class="icon-btn" onclick="openSearchModal()">🔍</div>
         <div class="icon-btn" onclick="openSettings()">⚙️</div>
       </div>
     </div>
@@ -178,11 +179,6 @@
         <button class="btn btn-glass" style="margin-top:20px; border-style:dashed;" onclick="openNewBill()">+ Add Bill</button>
       </div>
 
-      <div id="view-search" class="view-section hidden">
-        <input type="text" id="inp-search" placeholder="🔍 Search..." onkeyup="runSearch(this.value)">
-        <div id="search-results"></div>
-      </div>
-
     </div>
   </div>
 
@@ -191,9 +187,17 @@
     <div class="nav-item" onclick="switchTab('savings', this)"><div class="nav-icon">🏦</div></div>
     <div style="width:40px;"></div>
     <div class="nav-item" onclick="switchTab('bills', this)"><div class="nav-icon">🧾</div></div>
-    <div class="nav-item" onclick="switchTab('search', this)"><div class="nav-icon">🔍</div></div>
+    <div class="nav-item" style="visibility:hidden;"></div>
   </div>
   <div class="fab" id="main-fab" onclick="openNewTx()">+</div>
+
+  <div class="modal-overlay" id="modal-search" onclick="closeModal(event, 'modal-search')">
+    <div class="modal-sheet" style="height: 85%;">
+      <h2>Search</h2>
+      <input type="text" id="inp-search" placeholder="🔍 Search notes or amounts..." onkeyup="runSearch(this.value)">
+      <div id="search-results"></div>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="modal-settle" onclick="closeModal(event, 'modal-settle')">
     <div class="modal-sheet">
@@ -276,8 +280,11 @@
       </div>
       
       <div id="inc-stream-select" class="hidden" style="margin-bottom:15px;">
-        <div class="label">INCOME SOURCE</div>
-        <select id="inp-tx-stream" onchange="handleCustomStream()">
+        <div class="label" style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <span>INCOME SOURCE</span>
+            <span id="btn-del-stream" style="color:var(--danger); cursor:pointer; display:none; text-transform:none; font-weight:bold; font-size:0.8rem;" onclick="deleteCustomStream()">Delete Source</span>
+        </div>
+        <select id="inp-tx-stream" onchange="handleStreamChange()">
           <option value="Salary">Salary / Job</option>
           <option value="Agency">Agency / Freelance</option>
           <option value="Content">Content / YouTube</option>
@@ -310,6 +317,25 @@
       </div>
       <input type="text" id="inp-adjust-amt" placeholder="Enter Amount">
       <button class="btn btn-primary" onclick="saveAdjustment()">Apply Update</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-manage-quicklogs" onclick="closeModal(event, 'modal-manage-quicklogs')">
+    <div class="modal-sheet">
+      <h2>Customize Quick Logs</h2>
+      <p style="color:#888; margin-bottom:15px; font-size:0.8rem;">Add your frequent purchases here. Delete old ones to clean up.</p>
+      <div id="quicklog-list" style="margin-bottom:20px;"></div>
+      
+      <div class="label" style="color:var(--primary);">ADD NEW QUICK LOG</div>
+      <div style="display:flex; gap:10px; margin-bottom:10px;">
+        <input type="text" id="inp-ql-icon" placeholder="Emoji" style="width:80px; margin-bottom:0;">
+        <input type="text" id="inp-ql-name" placeholder="Name" style="flex:1; margin-bottom:0;">
+      </div>
+      <div style="display:flex; gap:10px; margin-bottom:15px;">
+        <input type="number" id="inp-ql-amt" placeholder="Cost (₱)" style="flex:1; margin-bottom:0;">
+        <select id="inp-ql-cat" style="flex:1; margin-bottom:0;"></select>
+      </div>
+      <button class="btn btn-primary" onclick="addQuickLog()">+ Add to Dashboard</button>
     </div>
   </div>
 
@@ -366,7 +392,7 @@
   </div>
 
   <script>
-    const VERSION = 'bl_asset_v11'; 
+    const VERSION = 'bl_asset_v12'; 
 
     const CATEGORIES = {
       exp: [
@@ -381,16 +407,8 @@
       ]
     };
 
-    // UX PRESETS
-    const QUICK_PRESETS = [
-        { name: "Coffee", amt: 150, icon: "☕", cat: "food" },
-        { name: "Lunch", amt: 250, icon: "🍔", cat: "food" },
-        { name: "Gas", amt: 500, icon: "🚗", cat: "trans" },
-        { name: "Grab", amt: 300, icon: "🚕", cat: "trans" }
-    ];
-
     let data = {
-      config: { baseIncome: 0, safePct: 50, privacyMode: false, rollover: 0, customStreams: [] },
+      config: { baseIncome: 0, safePct: 50, privacyMode: false, rollover: 0, customStreams: [], quickLogs: null },
       transactions: [], bills: [], jars: [], trophyRoom: [], history: [], liquidCash: 0, currentMonth: ""
     };
 
@@ -410,9 +428,25 @@
       if (saved) {
         data = JSON.parse(saved);
         if (!data.config.customStreams) data.config.customStreams = [];
-        // Upgrade legacy jars to include "type"
+        if (!data.config.quickLogs) {
+            // Seed defaults if missing
+            data.config.quickLogs = [
+              { name: "Coffee", amt: 150, icon: "☕", cat: "food" },
+              { name: "Lunch", amt: 250, icon: "🍔", cat: "food" },
+              { name: "Gas", amt: 500, icon: "🚗", cat: "trans" },
+              { name: "Grab", amt: 300, icon: "🚕", cat: "trans" }
+            ];
+        }
         data.jars.forEach(j => { if(!j.type) j.type = 'wish'; }); 
-      } else { data.currentMonth = getMonthLabel(new Date()); }
+      } else { 
+          data.currentMonth = getMonthLabel(new Date()); 
+          data.config.quickLogs = [
+              { name: "Coffee", amt: 150, icon: "☕", cat: "food" },
+              { name: "Lunch", amt: 250, icon: "🍔", cat: "food" },
+              { name: "Gas", amt: 500, icon: "🚗", cat: "trans" },
+              { name: "Grab", amt: 300, icon: "🚕", cat: "trans" }
+          ];
+      }
     }
 
     function saveData() { localStorage.setItem(VERSION, JSON.stringify(data)); renderUI(); }
@@ -461,13 +495,11 @@
         return (data.liquidCash / (totalSpend / monthsCounted)).toFixed(1);
     }
 
-    // --- WATERFALL INTERCEPT ---
     function runVaultIntercept(amountAdded) {
       if (amountAdded <= 0 || viewMonth !== data.currentMonth) return;
       let remainingPool = amountAdded;
       let interceptedTotal = 0;
 
-      // Tier 1: Priority Funds
       data.jars.filter(j => j.type === 'priority').forEach(jar => {
           if (remainingPool <= 0) return;
           let pull = 0;
@@ -477,11 +509,10 @@
           if (pull > 0) { jar.saved += pull; remainingPool -= pull; interceptedTotal += pull; }
       });
 
-      // Tier 2: Wish Jars
       data.jars.filter(j => j.type === 'wish').forEach(jar => {
           if (remainingPool <= 0 || jar.saved >= jar.target) return;
           let pull = 0;
-          if (jar.ruleType === 'pct' && jar.ruleAmt > 0) pull = remainingPool * (jar.ruleAmt / 100); // Wishes take % of LEFTOVERS
+          if (jar.ruleType === 'pct' && jar.ruleAmt > 0) pull = remainingPool * (jar.ruleAmt / 100); 
           else if (jar.ruleType === 'fixed' && jar.ruleAmt > 0) pull = jar.ruleAmt;
           pull = Math.min(pull, jar.target - jar.saved);
           pull = Math.min(pull, remainingPool);
@@ -513,18 +544,60 @@
       closeModal(null, 'modal-settle'); saveData();
     }
 
-    // --- QUICK ADD ---
+    // --- QUICK LOGS SYSTEM ---
     function logQuickTx(name, amt, catId, icon) {
         data.transactions.unshift({ id: Date.now(), title: name, amount: amt, type: 'exp', catIcon: icon, catId: catId, date: new Date().toISOString() });
         saveData();
     }
+
+    function openManageQuickLogs() {
+        renderQuickLogList();
+        const catSel = document.getElementById('inp-ql-cat');
+        catSel.innerHTML = CATEGORIES.exp.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+        openModal('modal-manage-quicklogs');
+    }
+
+    function renderQuickLogList() {
+        const list = document.getElementById('quicklog-list');
+        list.innerHTML = "";
+        (data.config.quickLogs || []).forEach((q, i) => {
+            list.innerHTML += `<div class="card" style="padding:15px; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div><span style="font-size:1.4rem; margin-right:10px;">${q.icon}</span> <b>${q.name}</b> <span class="mono" style="margin-left:5px; color:#888;">₱${q.amt}</span></div>
+                <div style="color:var(--danger); cursor:pointer; font-size:1.2rem;" onclick="deleteQuickLog(${i})">✕</div>
+            </div>`;
+        });
+    }
+
+    function addQuickLog() {
+        const icon = document.getElementById('inp-ql-icon').value.trim() || '📝';
+        const name = document.getElementById('inp-ql-name').value.trim();
+        const amt = parseFloat(document.getElementById('inp-ql-amt').value);
+        const cat = document.getElementById('inp-ql-cat').value;
+        if(name && !isNaN(amt)) {
+            data.config.quickLogs.push({icon, name, amt, cat});
+            document.getElementById('inp-ql-icon').value = '';
+            document.getElementById('inp-ql-name').value = '';
+            document.getElementById('inp-ql-amt').value = '';
+            saveData();
+            renderQuickLogList();
+        } else {
+            alert("Please enter a valid name and amount.");
+        }
+    }
+
+    function deleteQuickLog(i) {
+        data.config.quickLogs.splice(i, 1);
+        saveData();
+        renderQuickLogList();
+    }
+
 
     // --- JARS & WISHES ---
     function openNewJar(type) {
         document.getElementById('inp-jar-type').value = type;
         if (type === 'priority') {
             document.getElementById('modal-jar-header').innerText = "New Priority Fund";
-            document.getElementById('div-jar-target-container').style.display = 'none'; // Priority has no target
+            document.getElementById('div-jar-target-container').style.display = 'none';
             document.getElementById('btn-save-new-jar').style.background = "var(--success)";
             document.getElementById('lbl-jar-rule-desc').innerText = "Priority funds get first dibs. They intercept money before Wish Jars.";
         } else {
@@ -619,13 +692,34 @@
     }
 
     // --- TX & MODALS ---
+    function handleStreamChange() {
+        const sel = document.getElementById('inp-tx-stream');
+        const delBtn = document.getElementById('btn-del-stream');
+        if (sel.value === '_custom') {
+            handleCustomStream();
+            delBtn.style.display = 'none';
+        } else if (data.config.customStreams && data.config.customStreams.includes(sel.value)) {
+            delBtn.style.display = 'block';
+        } else {
+            delBtn.style.display = 'none';
+        }
+    }
+
+    function deleteCustomStream() {
+        const sel = document.getElementById('inp-tx-stream');
+        if(confirm(`Delete custom source "${sel.value}"?`)) {
+            data.config.customStreams = data.config.customStreams.filter(s => s !== sel.value);
+            saveData();
+            setTxType('inc'); // refresh dropdown
+        }
+    }
+
     function setTxType(type) {
       isExpense = type === 'exp';
       const bE = document.getElementById('btn-type-exp'); const bI = document.getElementById('btn-type-inc');
       const bS = document.getElementById('btn-save-tx'); const assetTog = document.getElementById('asset-toggle-container');
       const streamSel = document.getElementById('inc-stream-select');
       
-      // Setup Custom Streams UI
       const sel = document.getElementById('inp-tx-stream');
       Array.from(sel.options).forEach(opt => { if(opt.className === 'custom-opt') opt.remove(); });
       if(data.config.customStreams) {
@@ -643,6 +737,7 @@
         bI.style.background = "var(--primary)"; bI.style.color = "black"; bE.style.background = "transparent"; bE.style.color = "#666";
         bS.innerText = "SAVE INCOME"; bS.className = "btn btn-primary";
         selectedCat = CATEGORIES.inc[0]; isAssetTx = false; assetTog.classList.remove('active'); assetTog.classList.add('hidden'); streamSel.classList.remove('hidden');
+        sel.selectedIndex = 0; handleStreamChange();
       }
       renderCatGrid();
     }
@@ -654,10 +749,11 @@
             if (newStream && newStream.trim() !== "") {
                 if(!data.config.customStreams) data.config.customStreams = [];
                 data.config.customStreams.push(newStream.trim());
-                saveData(); // Will trigger render and close modal, user just needs to reopen.
-                alert("Custom stream added. Re-open New Entry to use it.");
-                closeModal(null, 'modal-tx');
-            } else { sel.selectedIndex = 0; }
+                saveData(); 
+                setTxType('inc'); // refresh to show new option
+                sel.value = newStream.trim();
+                handleStreamChange();
+            } else { sel.selectedIndex = 0; handleStreamChange(); }
         }
     }
 
@@ -807,9 +903,12 @@
         const row = document.getElementById('quick-presets');
         if(viewMonth !== data.currentMonth) { row.style.display = 'none'; return; }
         row.style.display = 'flex'; row.innerHTML = "";
-        QUICK_PRESETS.forEach(p => {
-            row.innerHTML += `<div class="chip" onclick="logQuickTx('${p.name}', ${p.amt}, '${p.cat}', '${p.icon}')">${p.icon} ${p.name} ₱${p.amt}</div>`;
+        
+        (data.config.quickLogs || []).forEach(p => {
+            row.innerHTML += `<div class="chip" onclick="logQuickTx('${p.name}', ${p.amt}, '${p.cat}', '${p.icon}')"><span>${p.icon}</span> <span>${p.name} ₱${p.amt}</span></div>`;
         });
+        
+        row.innerHTML += `<div class="chip" style="border-style:dashed; border-color:var(--primary); color:var(--primary);" onclick="openManageQuickLogs()"><span>⚙️</span> Customize</div>`;
     }
 
     function renderJarList() {
@@ -930,10 +1029,17 @@
     function openNewBill() { openModal('modal-bill'); }
     function openAdjustSavings() { openModal('modal-adjust'); }
 
+    function openSearchModal() {
+        document.getElementById('inp-search').value = "";
+        document.getElementById('search-results').innerHTML = "";
+        openModal('modal-search');
+        setTimeout(() => document.getElementById('inp-search').focus(), 100);
+    }
+
     function runSearch(q) {
       const res = document.getElementById('search-results'); res.innerHTML = ""; if (!q || q.length < 2) return;
       let matches = []; data.transactions.forEach(t => matches.push({ ...t, src: 'Current' })); data.history.forEach(h => (h.txs || []).forEach(t => matches.push({ ...t, src: h.id })));
-      const needle = q.toLowerCase(); matches = matches.filter(m => (m.title || '').toLowerCase().includes(needle));
+      const needle = q.toLowerCase(); matches = matches.filter(m => (m.title || '').toLowerCase().includes(needle) || m.amount.toString().includes(needle));
       if (matches.length === 0) { res.innerHTML = "<div style='text-align:center;margin-top:20px;color:#666'>No matches</div>"; return; }
       matches.forEach(m => { const c = m.type === 'exp' ? 'text-red' : 'text-teal'; const s = m.type === 'exp' ? '-' : '+'; res.innerHTML += `<div class="tx-item"><div class="bold" style="font-size:1.2rem; margin-right:10px;">${m.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${m.title}</div><div class="label">${m.src}</div></div><div class="mono bold ${c}">${s}₱${m.amount.toLocaleString()}</div></div>`; });
     }
