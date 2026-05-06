@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Bottom Line v24 (Zero-Based Architect)</title>
+  <title>Bottom Line v25 (Data Recovery & Architecture Patch)</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -27,7 +27,9 @@
     .text-red { color: var(--danger); } .text-teal { color: var(--primary); } .text-gold { color: var(--gold); }
 
     .mobile-frame { width: 100%; max-width: 480px; height: 100dvh; background: var(--bg-body); position: relative; display: flex; flex-direction: column; border: 1px solid #222; overflow: hidden; }
-    .scroll-area { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; padding-bottom: 140px; scrollbar-width: none; }
+    
+    /* ✅ ULTIMATE FIX: 160px bottom padding guarantees UI clearance for the FAB and Nav */
+    .scroll-area { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; padding-bottom: 160px; scrollbar-width: none; }
     .scroll-area::-webkit-scrollbar { display: none; }
 
     .app-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 10px 24px; z-index: 50; }
@@ -87,7 +89,7 @@
 
     .jar-cancel-btn { position: absolute; top: 12px; right: 15px; color: #888; cursor: pointer; font-size: 1.2rem; z-index: 10; }
 
-    /* ✅ NEW: Bill Checkbox Style */
+    /* Checklist Style */
     .bill-checkbox { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #555; margin-right: 15px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; }
     .bill-checkbox.paid { background: var(--success); border-color: var(--success); }
     .bill-checkbox.paid::after { content: '✓'; color: #000; font-size: 0.8rem; font-weight: bold; }
@@ -121,7 +123,7 @@
               <div class="mono bold blur-sensitive" style="font-size: 2.8rem; color: var(--primary); margin: 5px 0;" id="disp-safe">₱0</div>
               <div class="label" style="margin-top:5px;">DAILY BURN RATE: <span class="mono blur-sensitive" style="color:#fff;" id="disp-daily">₱0</span></div>
             </div>
-            <div style="width:70px; height:70px; position:relative;">
+            <div style="width:70px; height:70px; position:relative;" onclick="openSettings()">
               <canvas id="chart-ring"></canvas>
               <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:0.7rem; font-weight:bold; color:#666;" id="lbl-ring-pct">0%</div>
             </div>
@@ -130,7 +132,7 @@
             <div onclick="openIncomeModal()" style="cursor:pointer; flex:1;">
               <div class="label">TOTAL FUNDING</div>
               <div class="mono bold blur-sensitive" id="disp-income-val">₱0</div>
-              <!-- ✅ NEW: Expected Income Progress Bar -->
+              <!-- Expected Income Progress Bar -->
               <div id="disp-income-progress" style="margin-top:5px;"></div>
             </div>
             <div style="text-align:right;">
@@ -140,7 +142,7 @@
           </div>
         </div>
 
-        <!-- ✅ NEW: Dynamic Category Budgets (Envelopes) -->
+        <!-- Dynamic Category Budgets (Envelopes) -->
         <div id="home-category-budgets" style="margin-bottom: 24px;"></div>
 
         <div class="card" style="background: #111; padding: 15px 24px; margin-bottom: 24px; display:flex; justify-content:space-between; align-items:center;">
@@ -208,11 +210,9 @@
 
       <!-- BILLS TAB -->
       <div id="view-bills" class="view-section hidden">
-        <!-- ✅ NEW: Updated Heatmap Timeline -->
         <div class="section-title">DAILY SPENDING HEATMAP</div>
         <div id="timeline-scroll" style="display:flex; overflow-x:auto; gap:8px; padding-bottom:15px; margin-bottom:15px;"></div>
         
-        <!-- ✅ NEW: Interactive Bills Checklist -->
         <div class="section-title">RECURRING BILLS</div>
         <div id="bill-list"></div>
         <button class="btn btn-glass" style="margin-top:20px; border-style:dashed;" onclick="openNewBill()">+ Add Bill</button>
@@ -355,7 +355,6 @@
           <button class="btn btn-glass" style="width:50px; padding:10px;" onclick="addPreset()">+</button>
       </div>
 
-      <!-- ✅ NEW: CATEGORY BUDGETS (ENVELOPES) -->
       <div class="label">CATEGORY BUDGETS (ENVELOPES)</div>
       <p style="font-size:0.7rem; color:#666; margin-bottom:10px;">Set strict limits for specific categories. Leave blank to ignore.</p>
       <div id="settings-cat-budgets" style="margin-bottom:20px; border:1px solid #333; padding:10px; border-radius:10px;"></div>
@@ -385,7 +384,6 @@
     <div class="modal-sheet">
       <h2>Fund Your Month</h2>
       
-      <!-- ✅ NEW: EXPECTED INCOME STREAMS -->
       <div class="label">1. EXPECTED INCOME STREAMS</div>
       <p style="font-size:0.7rem; color:#666; margin-bottom:10px;">Set how much you expect to earn from your sources this month.</p>
       <div id="expected-income-list" style="margin-bottom:15px; border:1px solid #333; padding:10px; border-radius:10px;"></div>
@@ -420,7 +418,8 @@
   </div>
 
   <script>
-    const VERSION = 'bl_asset_v12'; // Updated version for new schema
+    // ✅ ULTIMATE FIX: Hard-coded back to v11 to restore your invisible data instantly.
+    const VERSION = 'bl_asset_v11'; 
 
     const CATEGORIES = {
       exp: [
@@ -452,12 +451,20 @@
       const saved = localStorage.getItem(VERSION);
       if (saved) {
         data = JSON.parse(saved);
+        
+        // Safety Checks for data structure evolution
+        if (!data.config) data.config = { baseIncome: 0, safePct: 50, privacyMode: false, rollover: 0, customStreams: [], customPresets: [], expectedIncome: {}, categoryBudgets: {} };
         if (!data.config.customStreams) data.config.customStreams = ["Salary", "Agency", "Content"];
         if (!data.config.customPresets) data.config.customPresets = [];
         if (!data.config.expectedIncome) data.config.expectedIncome = {};
         if (!data.config.categoryBudgets) data.config.categoryBudgets = {};
         if (!data.debts) data.debts = [];
+        if (!data.jars) data.jars = [];
+        
+        // Recover older jars
         data.jars.forEach(j => { if(j.type !== 'priority' && j.type !== 'wish') j.type = 'wish'; }); 
+        
+        if (!data.bills) data.bills = [];
         data.bills.forEach(b => { if(b.lastPaidMonth === undefined) b.lastPaidMonth = ""; });
       } else { 
           data.currentMonth = getMonthLabel(new Date()); 
@@ -552,7 +559,6 @@
       if (toSave > 0) runVaultIntercept(toSave);
       data.transactions = []; data.currentMonth = realMonth; viewMonth = realMonth;
       
-      // Reset bill checkboxes
       data.bills.forEach(b => b.lastPaidMonth = "");
       
       closeModal(null, 'modal-settle'); saveData();
@@ -571,13 +577,20 @@
             if(!data.config.customPresets) data.config.customPresets = [];
             data.config.customPresets.push({name: n, amt: a, icon: i});
             document.getElementById('inp-preset-name').value = ""; document.getElementById('inp-preset-amt').value = "";
-            saveData(); openSettings(); 
+            saveData(); openSettings(); // Re-render settings modal list live
         }
     }
     
     function delPreset(index) { data.config.customPresets.splice(index, 1); saveData(); openSettings(); }
 
     function openNewJar(type) {
+        // ✅ FIX: Clear old invisible inputs
+        document.getElementById('inp-jar-name').value = "";
+        document.getElementById('inp-jar-target').value = "";
+        document.getElementById('inp-jar-date').value = "";
+        document.getElementById('inp-jar-ruletype').value = "none";
+        document.getElementById('inp-jar-ruleamt').value = "";
+
         document.getElementById('inp-jar-type').value = type;
         if (type === 'priority') {
             document.getElementById('modal-jar-header').innerText = "New Priority Fund"; document.getElementById('div-jar-target-container').style.display = 'none'; document.getElementById('btn-save-new-jar').style.background = "var(--success)"; document.getElementById('lbl-jar-rule-desc').innerText = "Priority funds get first dibs. They intercept money before Wish Jars.";
@@ -589,7 +602,11 @@
 
     function saveJar() {
       const type = document.getElementById('inp-jar-type').value; const n = document.getElementById('inp-jar-name').value.trim(); const t = parseFloat(document.getElementById('inp-jar-target').value) || 0; const goalDate = document.getElementById('inp-jar-date').value; const rType = document.getElementById('inp-jar-ruletype').value; const rAmt = parseFloat(document.getElementById('inp-jar-ruleamt').value) || 0;
-      if (n) { data.jars.push({ type: type, name: n, target: type==='priority'? null : t, saved: 0, dateCreated: new Date().toISOString(), goalDate: goalDate || null, ruleType: rType, ruleAmt: rAmt }); closeModal(null, 'modal-jar'); saveData(); }
+      if (!n) return alert("Please enter a name for the fund.");
+      if (type === 'wish' && t <= 0) return alert("Please enter a target goal greater than 0.");
+      
+      data.jars.push({ type: type, name: n, target: type==='priority'? null : t, saved: 0, dateCreated: new Date().toISOString(), goalDate: goalDate || null, ruleType: rType, ruleAmt: rAmt }); 
+      closeModal(null, 'modal-jar'); saveData(); 
     }
 
     function openManageJar(index) {
@@ -704,17 +721,14 @@
     function saveBill() { const n = document.getElementById('inp-bill-name').value.trim(); const rawAmt = document.getElementById('inp-bill-amt').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {} const d = parseInt(document.getElementById('inp-bill-day').value, 10) || 1; if (n && a) { data.bills.push({ name: n, amount: a, day: d, lastPaidMonth: "" }); closeModal(null, 'modal-bill'); saveData(); } }
     function deleteBill(i) { if (confirm("Remove bill?")) { data.bills.splice(i, 1); saveData(); } }
     
-    // ✅ NEW: Interactive Bill Checklist Logic
     function markBillPaid(i) {
         if(viewMonth !== data.currentMonth) return alert("Can only mark bills paid in current month.");
         const b = data.bills[i];
         if (b.lastPaidMonth === data.currentMonth) {
-            // Undo payment
             b.lastPaidMonth = "";
             const txIdx = data.transactions.findIndex(t => t.title === b.name && t.amount === b.amount && t.type === 'exp');
             if(txIdx >= 0) data.transactions.splice(txIdx, 1);
         } else {
-            // Mark paid
             b.lastPaidMonth = data.currentMonth;
             data.transactions.unshift({ id: Date.now(), title: b.name, amount: b.amount, type: 'exp', catIcon: '⚡', catId: 'bill', date: new Date().toISOString() });
         }
@@ -783,9 +797,8 @@
       document.getElementById('disp-total-exp').innerText = `₱ ${stats.expenses.toLocaleString()}`;
       document.getElementById('disp-runway').innerText = calculateRunway() + " mo";
       
-      // ✅ NEW: Expected Income Progress Bar
       let totalExpected = 0;
-      Object.values(data.config.expectedIncome).forEach(v => totalExpected += v);
+      Object.values(data.config.expectedIncome || {}).forEach(v => totalExpected += v);
       if (totalExpected > 0) {
           const incPct = Math.min(100, (stats.income / totalExpected) * 100);
           document.getElementById('disp-income-progress').innerHTML = `<div style="font-size:0.6rem; color:#888;">${incPct.toFixed(0)}% of ₱${totalExpected.toLocaleString()} Expected</div><div style="height:3px; background:#333; margin-top:3px; border-radius:2px;"><div style="width:${incPct}%; height:100%; background:var(--primary);"></div></div>`;
@@ -802,7 +815,7 @@
       document.getElementById('disp-frozen-cash').innerText = `₱ ${stats.frozen.toLocaleString()}`;
 
       renderQuickPresets();
-      renderCategoryBudgets(stats.txs); // ✅ NEW
+      renderCategoryBudgets(stats.txs); 
       renderJarList();
       renderDebtList();
       renderTrophyList();
@@ -812,7 +825,7 @@
       const plMonthSel = document.getElementById('sel-insights-range');
       if (plMonthSel) { plMonthSel.innerHTML = `<option value="1">This Month</option><option value="3">Last 3 Months</option><option value="12">This Year (12 Mo)</option><option value="all">All Time</option><optgroup label="Specific Months">` + data.history.map(h => `<option value="${h.id}">${h.id}</option>`).reverse().join('') + `</optgroup>`; }
 
-      renderTimeline(stats.txs); // ✅ UPDATED for Heatmap
+      renderTimeline(stats.txs); 
       renderBillList();
       updateRingChart(stats);
 
@@ -820,11 +833,11 @@
       const lbl = document.getElementById('lbl-safe-pct'); if (lbl) lbl.innerText = `${clampInt(data.config.safePct, 0, 100)}%`;
     }
 
-    // ✅ NEW: Render Category Budget Envelopes
     function renderCategoryBudgets(txs) {
         const container = document.getElementById('home-category-budgets');
         container.innerHTML = "";
         
+        if(!data.config.categoryBudgets) return;
         const activeBudgets = Object.keys(data.config.categoryBudgets).filter(k => data.config.categoryBudgets[k] > 0);
         if (activeBudgets.length === 0) return;
         
@@ -855,10 +868,16 @@
     }
 
     function renderQuickPresets() {
-        const row = document.getElementById('quick-presets'); const container = document.getElementById('quick-log-container');
-        if(viewMonth !== data.currentMonth || !data.config.customPresets || data.config.customPresets.length === 0) { container.style.display = 'none'; return; }
-        container.style.display = 'block'; row.innerHTML = "";
-        data.config.customPresets.forEach(p => { row.innerHTML += `<div class="chip" onclick="logQuickTx('${p.name}', ${p.amt}, '${p.icon}')">${p.icon} ${p.name} ₱${p.amt}</div>`; });
+        const row = document.getElementById('quick-presets');
+        const container = document.getElementById('quick-log-container');
+        if(viewMonth !== data.currentMonth || !data.config.customPresets || data.config.customPresets.length === 0) { 
+            container.style.display = 'none'; return; 
+        }
+        container.style.display = 'block';
+        row.innerHTML = "";
+        data.config.customPresets.forEach(p => {
+            row.innerHTML += `<div class="chip" onclick="logQuickTx('${p.name}', ${p.amt}, '${p.icon}')">${p.icon} ${p.name} ₱${p.amt}</div>`;
+        });
     }
 
     function renderJarList() {
@@ -867,25 +886,40 @@
       const isCurrentMonth = viewMonth === data.currentMonth;
 
       data.jars.forEach((jar, i) => {
-        const isPriority = jar.type === 'priority'; const isReady = !isPriority && (jar.saved >= jar.target); const pct = isPriority ? 100 : Math.min(100, (jar.saved / jar.target) * 100);
+        const isPriority = jar.type === 'priority';
+        const isReady = !isPriority && (jar.saved >= jar.target);
+        const pct = isPriority ? 100 : Math.min(100, (jar.saved / jar.target) * 100);
+
         let actionHtml = '';
         if(isPriority) actionHtml = `<div style="height:4px; background:#333; margin-top:10px; border-radius:2px;"><div style="width:100%; height:100%; background:var(--success);"></div></div>`;
         else if(isReady && isCurrentMonth) actionHtml = `<button class="btn btn-claim" style="padding:10px; font-size:0.8rem; margin-top:10px;" onclick="event.stopPropagation(); updateJar(${i})">🏆 CLAIM NOW</button>`;
         else actionHtml = `<div style="height:4px; background:#333; margin-top:10px; border-radius:2px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:var(--purple);"></div></div>`;
 
         let ruleHtml = '';
-        if (jar.ruleType === 'pct') ruleHtml = `⚡ Auto: ${jar.ruleAmt}% of bank deposits`; else if (jar.ruleType === 'fixed') ruleHtml = `⚡ Auto: ₱${jar.ruleAmt.toLocaleString()} of bank deposits`;
+        if (jar.ruleType === 'pct') ruleHtml = `⚡ Auto: ${jar.ruleAmt}% of bank deposits`;
+        else if (jar.ruleType === 'fixed') ruleHtml = `⚡ Auto: ₱${jar.ruleAmt.toLocaleString()} of bank deposits`;
         if (ruleHtml) ruleHtml = `<div style="font-size:0.6rem; color:var(--success); margin-top:2px;">${ruleHtml}</div>`;
 
         let paceHtml = '';
         if (!isPriority && jar.goalDate && !isReady) {
-          const msLeft = new Date(jar.goalDate) - new Date(); const monthsLeft = Math.max(1, Math.ceil(msLeft / (1000 * 60 * 60 * 24 * 30)));
-          if (msLeft < 0) paceHtml = `<div style="font-size:0.6rem; color:var(--danger); margin-top:4px;">⚠️ Overdue</div>`; else paceHtml = `<div style="font-size:0.6rem; color:var(--warning); margin-top:4px;">⚠️ Pace: Need ₱${Math.ceil((jar.target - jar.saved) / monthsLeft).toLocaleString()}/mo</div>`;
+          const msLeft = new Date(jar.goalDate) - new Date();
+          const monthsLeft = Math.max(1, Math.ceil(msLeft / (1000 * 60 * 60 * 24 * 30)));
+          if (msLeft < 0) paceHtml = `<div style="font-size:0.6rem; color:var(--danger); margin-top:4px;">⚠️ Overdue</div>`;
+          else paceHtml = `<div style="font-size:0.6rem; color:var(--warning); margin-top:4px;">⚠️ Pace: Need ₱${Math.ceil((jar.target - jar.saved) / monthsLeft).toLocaleString()}/mo</div>`;
         }
 
-        const borderColor = isPriority ? 'var(--success)' : (isReady ? 'var(--gold)' : '#333'); const icon = isPriority ? '🛡️' : (isReady ? '🎁' : '🧞'); const targetText = isPriority ? '' : ` / ₱${jar.target.toLocaleString()}`;
+        const borderColor = isPriority ? 'var(--success)' : (isReady ? 'var(--gold)' : '#333');
+        const icon = isPriority ? '🛡️' : (isReady ? '🎁' : '🧞');
+        const targetText = isPriority ? '' : ` / ₱${jar.target.toLocaleString()}`;
 
-        const cardHtml = `<div class="card" style="padding:15px; margin:0; cursor:${isCurrentMonth ? 'pointer' : 'default'}; border:1px solid ${borderColor}; position:relative;" ${isCurrentMonth ? `onclick="openManageJar(${i})"` : ''}><div style="font-size:1.5rem; margin-bottom:5px;">${icon}</div><div class="bold" style="font-size:1rem;">${jar.name}</div><div class="label" style="margin-top:5px; color:#fff;">₱${jar.saved.toLocaleString()}${targetText}</div>${ruleHtml} ${paceHtml} ${actionHtml}</div>`;
+        const cardHtml = `
+          <div class="card" style="padding:15px; margin:0; cursor:${isCurrentMonth ? 'pointer' : 'default'}; border:1px solid ${borderColor}; position:relative;" ${isCurrentMonth ? `onclick="openManageJar(${i})"` : ''}>
+            <div style="font-size:1.5rem; margin-bottom:5px;">${icon}</div>
+            <div class="bold" style="font-size:1rem;">${jar.name}</div>
+            <div class="label" style="margin-top:5px; color:#fff;">₱${jar.saved.toLocaleString()}${targetText}</div>
+            ${ruleHtml} ${paceHtml} ${actionHtml}
+          </div>`;
+
         if (isPriority) pGrid.innerHTML += cardHtml; else wGrid.innerHTML += cardHtml;
       });
     }
@@ -893,7 +927,12 @@
     function renderDebtList() {
       const grid = document.getElementById('debt-grid');
       if(data.debts.length === 0) { grid.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No active liabilities.</div>`; return; }
-      grid.innerHTML = data.debts.map((d, i) => `<div class="tx-item" style="border-left:4px solid var(--danger); background:#1a1111; cursor:pointer;" onclick="payDebt(${i})"><div style="flex:1"><div class="bold">${d.name}</div><div class="label">TAP TO PAY</div></div><div class="mono bold text-red">₱${d.balance.toLocaleString()}</div></div>`).join('');
+      grid.innerHTML = data.debts.map((d, i) => `
+        <div class="tx-item" style="border-left:4px solid var(--danger); background:#1a1111; cursor:pointer;" onclick="payDebt(${i})">
+          <div style="flex:1"><div class="bold">${d.name}</div><div class="label">TAP TO PAY</div></div>
+          <div class="mono bold text-red">₱${d.balance.toLocaleString()}</div>
+        </div>
+      `).join('');
     }
 
     function renderTrophyList() {
@@ -901,62 +940,94 @@
       if (data.trophyRoom.length === 0) { list.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No completed wishes yet.</div>`; return; }
       data.trophyRoom.forEach(t => {
         let vHtml = '';
-        if (t.goalDate && t.dateBought) { const daysDiff = Math.floor((new Date(t.goalDate) - new Date(t.dateBought)) / (1000 * 60 * 60 * 24)); vHtml = daysDiff >= 0 ? `<div style="font-size:0.65rem; color:var(--success);">Beat goal by ${daysDiff} days!</div>` : `<div style="font-size:0.65rem; color:#888;">Missed goal by ${Math.abs(daysDiff)} days</div>`; }
+        if (t.goalDate && t.dateBought) {
+           const daysDiff = Math.floor((new Date(t.goalDate) - new Date(t.dateBought)) / (1000 * 60 * 60 * 24));
+           vHtml = daysDiff >= 0 ? `<div style="font-size:0.65rem; color:var(--success);">Beat goal by ${daysDiff} days!</div>` : `<div style="font-size:0.65rem; color:#888;">Missed goal by ${Math.abs(daysDiff)} days</div>`;
+        }
         list.innerHTML += `<div class="trophy-item"><div style="font-size:1.5rem; margin-right:15px;">🏆</div><div style="flex:1;"><div class="bold">${t.name}</div><div class="label" style="margin-bottom:2px;">BOUGHT: ${new Date(t.dateBought).toLocaleDateString()}</div>${vHtml}</div><div class="mono bold text-gold">-₱${(t.target ?? t.saved ?? 0).toLocaleString()}</div></div>`;
       });
     }
 
     function renderAssetList(txs) {
-      const list = document.getElementById('asset-list'); list.innerHTML = ""; const assets = txs.filter(t => t.type === 'asset');
+      const list = document.getElementById('asset-list'); list.innerHTML = "";
+      const assets = txs.filter(t => t.type === 'asset');
       if (assets.length === 0) { list.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No assets logged this month.</div>`; return; }
-      assets.forEach(tx => { const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : ''; list.innerHTML += `<div class="tx-item" style="border: 1px solid rgba(255, 214, 10, 0.3);"><div class="icon-box icon-asset">${tx.catIcon || '📦'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${new Date(tx.date).toLocaleDateString()}</div></div><div class="mono bold text-gold blur-sensitive">-₱${tx.amount.toLocaleString()}</div>${del}</div>`; });
+      assets.forEach(tx => {
+          const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
+          list.innerHTML += `<div class="tx-item" style="border: 1px solid rgba(255, 214, 10, 0.3);"><div class="icon-box icon-asset">${tx.catIcon || '📦'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${new Date(tx.date).toLocaleDateString()}</div></div><div class="mono bold text-gold blur-sensitive">-₱${tx.amount.toLocaleString()}</div>${del}</div>`;
+      });
     }
 
     function renderTxList(txs) {
-      const list = document.getElementById('tx-list'); list.innerHTML = ""; const budgetTxs = txs.filter(t => t.type !== 'asset');
+      const list = document.getElementById('tx-list'); list.innerHTML = "";
+      const budgetTxs = txs.filter(t => t.type !== 'asset');
       if (!budgetTxs || budgetTxs.length === 0) { list.innerHTML = `<div style="text-align:center; color:#333; margin-top:30px; font-size:0.9rem;">No data for ${viewMonth}</div>`; return; }
       const groups = {}; budgetTxs.forEach(tx => { const dk = new Date(tx.date).toLocaleDateString(); if (!groups[dk]) groups[dk] = []; groups[dk].push(tx); });
       Object.keys(groups).forEach(date => {
         list.innerHTML += `<div class="label" style="margin-top:20px; margin-left:5px;">${date}</div>`;
         groups[date].forEach(tx => {
-          const c = tx.type === 'exp' ? 'icon-exp' : 'icon-inc'; const ac = tx.type === 'exp' ? 'text-red' : 'text-teal'; const s = tx.type === 'exp' ? '-' : '+'; const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
+          const c = tx.type === 'exp' ? 'icon-exp' : 'icon-inc'; const ac = tx.type === 'exp' ? 'text-red' : 'text-teal'; const s = tx.type === 'exp' ? '-' : '+';
+          const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
           list.innerHTML += `<div class="tx-item"><div class="icon-box ${c}">${tx.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${(tx.catId || 'GENERAL').toUpperCase()}</div></div><div class="mono bold ${ac} blur-sensitive">${s}₱${tx.amount.toLocaleString()}</div>${del}</div>`;
         });
       });
     }
 
     function renderInsightsData() {
-      const range = document.getElementById('sel-insights-range').value; let targetTxs = []; let labels = []; let incData = []; let expData = []; let histToUse = [];
+      const range = document.getElementById('sel-insights-range').value;
+      let targetTxs = [];
+      let labels = []; let incData = []; let expData = [];
+      let histToUse = [];
+
       const currObj = {id: data.currentMonth, stats: {income: calculateStats().income, expenses: calculateStats().expenses}, txs: data.transactions};
 
       if (range === '1') { histToUse = [currObj]; } 
       else if (range === '3') { histToUse = data.history.slice(-2).concat([currObj]); } 
       else if (range === '12') { histToUse = data.history.slice(-11).concat([currObj]); } 
       else if (range === 'all') { histToUse = data.history.concat([currObj]); } 
-      else { if (range === data.currentMonth) { histToUse = [currObj]; } else { const h = data.history.find(x => x.id === range); if (h) histToUse = [h]; } }
+      else {
+          if (range === data.currentMonth) { histToUse = [currObj]; } 
+          else { const h = data.history.find(x => x.id === range); if (h) histToUse = [h]; }
+      }
 
-      labels = histToUse.map(h => h.id.split(' ')[0]); incData = histToUse.map(h => h.stats?.income || 0); expData = histToUse.map(h => h.stats?.expenses || 0);
+      labels = histToUse.map(h => h.id.split(' ')[0]);
+      incData = histToUse.map(h => h.stats?.income || 0);
+      expData = histToUse.map(h => h.stats?.expenses || 0);
       histToUse.forEach(h => { if (h.txs) targetTxs = targetTxs.concat(h.txs); });
 
       const ctx = document.getElementById('chart-insights').getContext('2d');
       if(chartInsights) chartInsights.destroy();
-      chartInsights = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{label:'Income', data:incData, backgroundColor:'#00E5FF', borderRadius:4}, {label:'Expenses', data:expData, backgroundColor:'#FF3B30', borderRadius:4}]}, options: { plugins: {legend: {display:false}}, scales: {y: {display:false, grid:{display:false}}, x: {grid: {display:false, color:'#222'}}}} });
+      chartInsights = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{label:'Income', data:incData, backgroundColor:'#00E5FF', borderRadius:4}, {label:'Expenses', data:expData, backgroundColor:'#FF3B30', borderRadius:4}]},
+        options: { plugins: {legend: {display:false}}, scales: {y: {display:false, grid:{display:false}}, x: {grid: {display:false, color:'#222'}}}}
+      });
 
       const streams = {};
-      targetTxs.forEach(t => { if(t.type==='inc' && t.catId !== 'Transfer' && t.catId !== 'transfer') { streams[t.catId] = (streams[t.catId] || 0) + t.amount; } });
+      targetTxs.forEach(t => { 
+          if(t.type==='inc' && t.catId !== 'Transfer' && t.catId !== 'transfer') {
+              streams[t.catId] = (streams[t.catId] || 0) + t.amount; 
+          }
+      });
+      
       const plList = document.getElementById('pl-list');
       if (Object.keys(streams).length === 0) { plList.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No revenue streams tracked in this period.</div>`; }
-      else { plList.innerHTML = Object.entries(streams).map(([name, val]) => `<div class="tx-item" style="background:#0a1a1a; border-left:3px solid var(--primary);"><div style="flex:1"><div class="bold">${name}</div></div><div class="mono bold text-teal">₱${val.toLocaleString()}</div></div>`).join(''); }
+      else {
+          plList.innerHTML = Object.entries(streams).map(([name, val]) => `
+            <div class="tx-item" style="background:#0a1a1a; border-left:3px solid var(--primary);">
+              <div style="flex:1"><div class="bold">${name}</div></div>
+              <div class="mono bold text-teal">₱${val.toLocaleString()}</div>
+            </div>
+          `).join('');
+      }
     }
 
-    // ✅ UPDATED: Daily Non-Essential Spending Heatmap
     function renderTimeline(txs) {
       const container = document.getElementById('timeline-scroll'); container.innerHTML = ""; const today = new Date().getDate();
       
       const dailySpend = {};
       if (txs) {
           txs.forEach(t => {
-              // Exclude bills and assets from "non-essential" heatmap
               if(t.type === 'exp' && t.catId !== 'bill' && t.catId !== 'transfer') {
                   const d = new Date(t.date).getDate();
                   dailySpend[d] = (dailySpend[d] || 0) + t.amount;
@@ -971,8 +1042,8 @@
         let bg = 'transparent';
 
         if (dailySpend[i] > 0) {
-            if (dailySpend[i] > 1000) { bg = 'rgba(255, 59, 48, 0.3)'; bc = 'var(--danger)'; tc = '#fff'; } // High Spend
-            else { bg = 'rgba(255, 159, 10, 0.3)'; bc = 'var(--warning)'; tc = '#fff'; } // Low Spend
+            if (dailySpend[i] > 1000) { bg = 'rgba(255, 59, 48, 0.3)'; bc = 'var(--danger)'; tc = '#fff'; } 
+            else { bg = 'rgba(255, 159, 10, 0.3)'; bc = 'var(--warning)'; tc = '#fff'; } 
         }
 
         if (hasBill && !dailySpend[i]) { tc = "#fff"; bc = i < today ? "var(--danger)" : (i === today ? "var(--primary)" : "#555"); bg = 'rgba(255,255,255,0.05)'; }
@@ -981,7 +1052,6 @@
       }
     }
 
-    // ✅ UPDATED: Interactive Bill Checklist
     function renderBillList() {
       const list = document.getElementById('bill-list'); list.innerHTML = ""; const today = new Date().getDate();
       data.bills.slice().sort((a, b) => a.day - b.day).forEach((b, i) => {
@@ -1024,7 +1094,6 @@
     function openSearch() { document.getElementById('inp-search').value = ""; document.getElementById('search-results').innerHTML = ""; openModal('modal-search'); }
     function openNewTx() { isAssetTx = false; renderCatGrid(); setTxType(isExpense ? 'exp' : 'inc'); openModal('modal-tx'); }
     
-    // ✅ UPDATED: Settings Modal with Category Budgets
     function openSettings() { 
         const pct = clampInt(data.config.safePct, 0, 100); const s = document.getElementById('slider-safe'); const l = document.getElementById('lbl-safe-pct');
         if (s) s.value = String(pct); if (l) l.innerText = `${pct}%`; 
@@ -1051,7 +1120,6 @@
         saveData();
     }
     
-    // ✅ UPDATED: Income Modal with Expected Income
     function openIncomeModal() { 
       if (viewMonth !== data.currentMonth) return alert("Edit funding in current month only."); 
       document.getElementById('inp-income-setting').value = data.config.baseIncome || ""; 
@@ -1072,11 +1140,7 @@
       openModal('modal-income'); 
     }
 
-    function saveExpectedInc(s, val) {
-        data.config.expectedIncome[s] = parseFloat(val) || 0;
-        saveData();
-    }
-    
+    function saveExpectedInc(s, val) { data.config.expectedIncome[s] = parseFloat(val) || 0; saveData(); }
     function removeStream(i) { data.config.customStreams.splice(i,1); openIncomeModal(); saveData(); }
     function openNewBill() { openModal('modal-bill'); }
     function openAdjustSavings() { openModal('modal-adjust'); }
