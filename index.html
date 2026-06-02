@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Bottom Line v27 (Crash-Proof Edition)</title>
+  <title>Bottom Line v26 (Ironclad Edition)</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -27,7 +27,8 @@
     .text-red { color: var(--danger); } .text-teal { color: var(--primary); } .text-gold { color: var(--gold); }
 
     .mobile-frame { width: 100%; max-width: 480px; height: 100dvh; background: var(--bg-body); position: relative; display: flex; flex-direction: column; border: 1px solid #222; overflow: hidden; }
-    .scroll-area { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; padding-bottom: 140px; scrollbar-width: none; }
+    
+    .scroll-area { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; scrollbar-width: none; }
     .scroll-area::-webkit-scrollbar { display: none; }
 
     .app-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 10px 24px; z-index: 50; }
@@ -90,6 +91,9 @@
     .bill-checkbox { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #555; margin-right: 15px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; }
     .bill-checkbox.paid { background: var(--success); border-color: var(--success); }
     .bill-checkbox.paid::after { content: '✓'; color: #000; font-size: 0.8rem; font-weight: bold; }
+    
+    /* Layout fix */
+    .bottom-spacer { width: 100%; height: 120px; flex-shrink: 0; }
   </style>
 </head>
 
@@ -104,13 +108,13 @@
       </div>
       <div style="display:flex; gap:15px;">
         <div class="icon-btn" id="btn-privacy" onclick="togglePrivacy()">👁️</div>
-        <div class="icon-btn" onclick="openSearch()">🔍</div>
         <div class="icon-btn" onclick="openSettings()">⚙️</div>
       </div>
     </div>
 
     <div class="scroll-area" id="main-scroll">
 
+      <!-- HOME TAB -->
       <div id="view-home" class="view-section">
         <div class="card" style="background: linear-gradient(145deg, #1A1A1A, #0d0d0d); padding: 24px; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -151,8 +155,11 @@
 
         <div class="section-title">ACTIVITY</div>
         <div id="tx-list"></div>
+        
+        <div class="bottom-spacer"></div>
       </div>
 
+      <!-- SAVINGS TAB -->
       <div id="view-savings" class="view-section hidden">
         <div class="asset-card">
           <div class="label" style="color:var(--gold);">TOTAL LIQUIDITY (BANK)</div>
@@ -182,11 +189,15 @@
         <div id="asset-list"></div>
         <div class="section-title" style="margin-top:40px;">TROPHY ROOM</div>
         <div id="trophy-list"></div>
+        
+        <div class="bottom-spacer"></div>
       </div>
 
+      <!-- INSIGHTS & SEARCH TAB -->
       <div id="view-insights" class="view-section hidden">
-        <input type="text" id="inp-search" placeholder="🔍 Search all history..." onkeyup="runSearch(this.value)" style="margin-bottom: 20px;">
-        <div id="search-results" style="margin-bottom: 30px;"></div>
+        <div class="section-title" style="margin-top:0;">SEARCH HISTORY</div>
+        <input type="text" id="inp-search" placeholder="🔍 Search any transaction..." onkeyup="runSearchInline(this.value)" style="margin-bottom: 20px;">
+        <div id="search-results-inline" style="margin-bottom: 30px;"></div>
 
         <div class="card" style="padding: 15px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -198,8 +209,11 @@
         
         <div class="section-title" style="margin-top:30px;">HUSTLE P&L</div>
         <div id="pl-list" style="margin-top:15px;"></div>
+        
+        <div class="bottom-spacer"></div>
       </div>
 
+      <!-- BILLS TAB -->
       <div id="view-bills" class="view-section hidden">
         <div class="section-title">DAILY SPENDING HEATMAP</div>
         <div id="timeline-scroll" style="display:flex; overflow-x:auto; gap:8px; padding-bottom:15px; margin-bottom:15px;"></div>
@@ -207,6 +221,8 @@
         <div class="section-title">RECURRING BILLS</div>
         <div id="bill-list"></div>
         <button class="btn btn-glass" style="margin-top:20px; border-style:dashed;" onclick="openNewBill()">+ Add Bill</button>
+        
+        <div class="bottom-spacer"></div>
       </div>
 
     </div>
@@ -221,14 +237,7 @@
   </div>
   <div class="fab" id="main-fab" onclick="openNewTx()">+</div>
 
-  <div class="modal-overlay" id="modal-search" onclick="closeModal(event, 'modal-search')">
-      <div class="modal-sheet" style="height: 80vh;">
-          <h2>Search History</h2>
-          <input type="text" id="inp-search-modal" placeholder="Search transactions..." onkeyup="runSearchModal(this.value)">
-          <div id="search-results-modal" style="margin-top:20px;"></div>
-      </div>
-  </div>
-
+  <!-- MODALS -->
   <div class="modal-overlay" id="modal-settle" onclick="closeModal(event, 'modal-settle')">
     <div class="modal-sheet">
       <h2>Month Settlement</h2>
@@ -245,13 +254,11 @@
       <h2 id="modal-jar-header">New Fund</h2>
       <input type="hidden" id="inp-jar-type">
       <input type="text" id="inp-jar-name" placeholder="Name (e.g. Emergency Fund)">
-      
       <div id="div-jar-target-container">
           <input type="number" id="inp-jar-target" placeholder="Target Cost (₱)">
           <div class="label" style="margin-top:10px;">GOAL DATE (DEADLINE)</div>
           <input type="date" id="inp-jar-date" style="font-family:'Inter', sans-serif;">
       </div>
-      
       <div class="label" style="margin-top:10px;">VAULT INTERCEPT RULE</div>
       <div style="display:flex; gap:10px; margin-bottom:10px;">
         <select id="inp-jar-ruletype" style="margin-bottom:0; font-size:0.9rem;">
@@ -270,22 +277,19 @@
     <div class="modal-sheet">
       <h2 id="manage-jar-title">Manage Wish</h2>
       <input type="hidden" id="manage-jar-index">
-      
       <div class="label" style="margin-top:10px;">ADJUST SAVED AMOUNT (₱)</div>
       <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button class="btn btn-glass" style="padding:10px; border-color:transparent;" id="btn-jar-adj-add" onclick="setJarAdjMode('add')">+ Add</button>
         <button class="btn btn-glass" style="padding:10px; border-color:transparent;" id="btn-jar-adj-sub" onclick="setJarAdjMode('sub')">- Minus</button>
         <button class="btn btn-glass" style="padding:10px; border-color:var(--primary);" id="btn-jar-adj-set" onclick="setJarAdjMode('set')">Set Total</button>
       </div>
-      <input type="number" id="inp-manage-jar-saved" placeholder="Amount">
-
+      <input type="text" id="inp-manage-jar-saved" placeholder="Amount">
       <div id="div-manage-target-container">
           <div class="label" style="margin-top:10px;">EDIT TARGET COST (₱)</div>
           <input type="number" id="inp-manage-jar-target">
           <div class="label" style="margin-top:10px;">EDIT GOAL DATE</div>
           <input type="date" id="inp-manage-jar-date" style="font-family:'Inter', sans-serif;">
       </div>
-      
       <div class="label" style="margin-top:10px;">EDIT VAULT INTERCEPT RULE</div>
       <div style="display:flex; gap:10px; margin-bottom:20px;">
         <select id="inp-manage-jar-ruletype" style="margin-bottom:0; font-size:0.9rem;">
@@ -295,7 +299,6 @@
         </select>
         <input type="number" id="inp-manage-jar-ruleamt" placeholder="Value" style="margin-bottom:0;">
       </div>
-      
       <button class="btn btn-primary" style="background:var(--purple); color:white; margin-bottom:10px;" onclick="updateJar()">Save Changes</button>
       <button class="btn btn-glass" style="color:var(--danger); border-color:var(--danger);" onclick="deleteJarFromManage()">Delete</button>
     </div>
@@ -308,22 +311,18 @@
         <div id="btn-type-exp" class="btn" onclick="setTxType('exp')">Expense</div>
         <div id="btn-type-inc" class="btn" onclick="setTxType('inc')">Income</div>
       </div>
-      
       <div id="inc-stream-select" class="hidden" style="margin-bottom:15px;">
         <div class="label">INCOME SOURCE</div>
         <select id="inp-tx-stream" onchange="handleCustomStream()"></select>
       </div>
-
       <div class="cat-grid" id="cat-list"></div>
       <input type="text" id="inp-tx-title" placeholder="Note">
       <p style="color:#666; font-size:0.8rem; margin-bottom:5px;">Amount (You can use math like 150+50)</p>
       <input type="text" id="inp-tx-amt" placeholder="Amount (e.g. 500 or 250*2)">
-      
       <div id="asset-toggle-container" class="toggle-container" onclick="toggleAssetMode()">
         <div><div style="font-weight:600; font-size:0.9rem;">Mark as Asset</div><div style="font-size:0.7rem; color:#888;">(Deducts from Bank, not Budget)</div></div>
         <div class="toggle-switch"></div>
       </div>
-
       <button class="btn btn-primary" id="btn-save-tx" onclick="saveTransaction()">SAVE</button>
     </div>
   </div>
@@ -413,16 +412,6 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="modal-bill" onclick="closeModal(event, 'modal-bill')">
-    <div class="modal-sheet">
-      <h2>New Bill</h2>
-      <input type="text" id="inp-bill-name" placeholder="Name">
-      <input type="number" id="inp-bill-amt" placeholder="Amount (₱)">
-      <input type="number" id="inp-bill-day" placeholder="Due Day (1-31)">
-      <button class="btn btn-primary" onclick="saveBill()">Save</button>
-    </div>
-  </div>
-
   <script>
     const VERSION = 'bl_asset_v11'; 
 
@@ -437,6 +426,7 @@
     };
 
     let data = {};
+
     let viewMonth = ""; let viewDateObj = new Date();
     let isExpense = true; let selectedCat = CATEGORIES.exp[0]; let chartInstance = null; let chartInsights = null;
     let adjMode = 'set'; let jarAdjMode = 'set'; let isAssetTx = false;
@@ -451,13 +441,19 @@
     function loadData() {
       const saved = localStorage.getItem(VERSION);
       if (saved) {
-        try { data = JSON.parse(saved); } catch (e) { data = {}; }
+        try {
+            data = JSON.parse(saved);
+        } catch (e) {
+            console.error("Data parse error", e);
+            data = {};
+        }
       }
       
-      // ✅ IRONCLAD FALLBACKS
+      // IRONCLAD FALLBACKS & SANITIZATION
       if (!data) data = {};
       if (!data.config) data.config = {};
       
+      // Force numerical conversions
       data.config.baseIncome = isNaN(parseFloat(data.config.baseIncome)) ? 0 : parseFloat(data.config.baseIncome);
       data.config.safePct = isNaN(parseInt(data.config.safePct)) ? 50 : parseInt(data.config.safePct);
       data.config.rollover = isNaN(parseFloat(data.config.rollover)) ? 0 : parseFloat(data.config.rollover);
@@ -476,12 +472,11 @@
       data.liquidCash = isNaN(parseFloat(data.liquidCash)) ? 0 : parseFloat(data.liquidCash);
       if (!data.currentMonth) data.currentMonth = getMonthLabel(new Date());
 
-      // ✅ AGGRESSIVE SANITIZATION FOR LEGACY JARS & DEBTS
+      // Rescue Legacy Jars & sanitize numbers
       if (!data.jars) data.jars = [];
       data.jars.forEach(j => { 
           j.saved = isNaN(parseFloat(j.saved)) ? 0 : parseFloat(j.saved);
           j.target = isNaN(parseFloat(j.target)) ? 0 : parseFloat(j.target);
-          j.ruleAmt = isNaN(parseFloat(j.ruleAmt)) ? 0 : parseFloat(j.ruleAmt);
           if(j.type !== 'priority' && j.type !== 'wish') j.type = 'wish'; 
       }); 
       
@@ -525,15 +520,13 @@
       
       const dailyExp = budgetTxs.filter(t => t.type === 'exp').reduce((s, t) => s + (t.amount || 0), 0);
       const limit = totalIncome * (clampInt(data.config.safePct, 0, 100) / 100);
-      
-      // ✅ FIX: Prevent safe from becoming NaN
-      const safe = isNaN(limit - dailyExp) ? 0 : (limit - dailyExp);
+      const safe = limit - dailyExp;
 
       const frozenCash = data.jars.reduce((s, j) => s + (j.saved || 0), 0);
       const debtTotal = data.debts.reduce((s, d) => s + (d.balance || 0), 0);
       
-      const freeCash = isNaN(snapshotLiquid - frozenCash) ? 0 : (snapshotLiquid - frozenCash);
-      const netWorth = isNaN(snapshotLiquid - debtTotal) ? 0 : (snapshotLiquid - debtTotal);
+      const freeCash = snapshotLiquid - frozenCash;
+      const netWorth = snapshotLiquid - debtTotal;
 
       return { income: totalIncome, expenses: dailyExp, limit, safe, liquid: snapshotLiquid, frozen: frozenCash, free: freeCash, net: netWorth, txs: activeTxs };
     }
@@ -628,23 +621,8 @@
     }
 
     function saveJar() {
-      const type = document.getElementById('inp-jar-type').value; 
-      const n = document.getElementById('inp-jar-name').value.trim(); 
-      const rawT = document.getElementById('inp-jar-target').value;
-      const t = parseFloat(rawT.replace(/[^\d.-]/g, '')) || 0; 
-      const goalDate = document.getElementById('inp-jar-date').value; 
-      const rType = document.getElementById('inp-jar-ruletype').value; 
-      const rawAmt = document.getElementById('inp-jar-ruleamt').value;
-      const rAmt = parseFloat(rawAmt.replace(/[^\d.-]/g, '')) || 0;
-      
-      if (n) { 
-        data.jars.push({ type: type, name: n, target: type==='priority'? 0 : t, saved: 0, dateCreated: new Date().toISOString(), goalDate: goalDate || null, ruleType: rType, ruleAmt: rAmt }); 
-        
-        // ✅ FIX: Wipe forms clean
-        document.getElementById('inp-jar-name').value = ""; document.getElementById('inp-jar-target').value = ""; document.getElementById('inp-jar-date').value = ""; document.getElementById('inp-jar-ruleamt').value = "";
-        
-        closeModal(null, 'modal-jar'); saveData(); 
-      } else { alert("Please provide a name."); }
+      const type = document.getElementById('inp-jar-type').value; const n = document.getElementById('inp-jar-name').value.trim(); const t = parseFloat(document.getElementById('inp-jar-target').value) || 0; const goalDate = document.getElementById('inp-jar-date').value; const rType = document.getElementById('inp-jar-ruletype').value; const rAmt = parseFloat(document.getElementById('inp-jar-ruleamt').value) || 0;
+      if (n) { data.jars.push({ type: type, name: n, target: type==='priority'? 0 : t, saved: 0, dateCreated: new Date().toISOString(), goalDate: goalDate || null, ruleType: rType, ruleAmt: rAmt }); closeModal(null, 'modal-jar'); saveData(); }
     }
 
     function openManageJar(index) {
@@ -676,7 +654,7 @@
         }
 
         if (jar.type === 'wish' && jar.target > 0 && jar.saved >= jar.target) {
-            if (confirm(`CLAIM REWARD: Buy "${jar.name}" for ₱${(jar.saved||0).toLocaleString()}?\n\nThis will deduct the amount from your Bank and move it to the Trophy Room.`)) {
+            if (confirm(`CLAIM REWARD: Buy "${jar.name}" for ₱${jar.saved.toLocaleString()}?\n\nThis will deduct the amount from your Bank and move it to the Trophy Room.`)) {
                 data.liquidCash -= jar.saved; data.trophyRoom.unshift({ ...jar, dateBought: new Date().toISOString() }); data.jars.splice(idx, 1);
                 closeModal(null, 'modal-manage-jar'); saveData(); return;
             }
@@ -687,17 +665,12 @@
     function deleteJarFromManage() { const idx = document.getElementById('manage-jar-index').value; if (idx !== "" && confirm("Cancel this fund? Saved cash will remain in Bank.")) { data.jars.splice(idx, 1); closeModal(null, 'modal-manage-jar'); saveData(); } }
     
     function openNewDebt() {
-      const name = prompt("Name of liability (e.g. Credit Card):"); 
-      const rawBal = prompt("Current balance owed (₱):");
-      if(!name || !rawBal) return;
-      const balance = parseFloat(rawBal.replace(/[^\d.-]/g, '')); // Strips out "Php" or commas
-      if(!isNaN(balance)) { data.debts.push({ name, balance }); saveData(); }
+      const name = prompt("Name of liability (e.g. Credit Card):"); const balance = prompt("Current balance owed (₱):");
+      if(name && !isNaN(parseFloat(balance))) { data.debts.push({ name, balance: parseFloat(balance) }); saveData(); }
     }
 
     function payDebt(i) {
-      const rawAmt = prompt(`Pay off ${data.debts[i].name}? Enter payment:`);
-      if(!rawAmt) return;
-      const amt = parseFloat(rawAmt.replace(/[^\d.-]/g, ''));
+      const amt = parseFloat(prompt(`Pay off ${data.debts[i].name}? Enter payment:`));
       if(amt && !isNaN(amt)) {
           if (amt > data.liquidCash) return alert("Not enough cash in bank to make this payment.");
           data.liquidCash -= amt; data.debts[i].balance -= amt; 
@@ -764,17 +737,7 @@
     }
     function deleteTx(i) { if (confirm("Delete?")) { if(data.transactions[i].type === 'asset') data.liquidCash += data.transactions[i].amount; data.transactions.splice(i, 1); saveData(); } }
     
-    function saveBill() { 
-        const n = document.getElementById('inp-bill-name').value.trim(); 
-        const rawAmt = document.getElementById('inp-bill-amt').value; 
-        let a = parseFloat(rawAmt.replace(/[^\d.-]/g, '')) || 0;
-        const d = parseInt(document.getElementById('inp-bill-day').value, 10) || 1; 
-        if (n && !isNaN(a) && a > 0) { 
-            data.bills.push({ name: n, amount: a, day: d, lastPaidMonth: "" }); 
-            document.getElementById('inp-bill-name').value = ""; document.getElementById('inp-bill-amt').value = ""; document.getElementById('inp-bill-day').value = "";
-            closeModal(null, 'modal-bill'); saveData(); 
-        } 
-    }
+    function saveBill() { const n = document.getElementById('inp-bill-name').value.trim(); const rawAmt = document.getElementById('inp-bill-amt').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {} const d = parseInt(document.getElementById('inp-bill-day').value, 10) || 1; if (n && !isNaN(a)) { data.bills.push({ name: n, amount: a, day: d, lastPaidMonth: "" }); closeModal(null, 'modal-bill'); saveData(); } }
     function deleteBill(i) { if (confirm("Remove bill?")) { data.bills.splice(i, 1); saveData(); } }
     
     function markBillPaid(i) {
@@ -798,14 +761,14 @@
     function saveAdjustment() {
       const rawAmt = document.getElementById('inp-adjust-amt').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
       if (!isNaN(a)) { 
-        if (adjMode === 'add') { data.liquidCash += a; runVaultIntercept(a); } else if (adjMode === 'sub') { data.liquidCash -= a; } else { data.liquidCash = a; }
+        if (adjMode === 'add') { data.liquidCash += a; runVaultIntercept(a); } else if (adjMode === 'sub') data.liquidCash -= a; else data.liquidCash = a;
         closeModal(null, 'modal-adjust'); document.getElementById('inp-adjust-amt').value = ""; saveData(); 
       }
     }
 
     function saveIncome() { 
         const rawAmt = document.getElementById('inp-income-setting').value; 
-        let a = parseFloat(rawAmt.replace(/[^\d.-]/g, '')) || 0;
+        let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {} 
         if (!isNaN(a)) { data.config.baseIncome = a; closeModal(null, 'modal-income'); saveData(); } 
     }
     
@@ -817,7 +780,7 @@
         closeModal(null, 'modal-income'); document.getElementById('inp-transfer-amt').value = ""; saveData();
       }
     }
-    function overrideRollover() { const rawAmt = document.getElementById('inp-rollover-override').value; let a = parseFloat(rawAmt.replace(/[^\d.-]/g, '')) || 0; if (!isNaN(a)) { data.config.rollover = a; closeModal(null, 'modal-income'); document.getElementById('inp-rollover-override').value = ""; saveData(); } }
+    function overrideRollover() { const rawAmt = document.getElementById('inp-rollover-override').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {} if (!isNaN(a)) { data.config.rollover = a; closeModal(null, 'modal-income'); document.getElementById('inp-rollover-override').value = ""; saveData(); } }
     function updateBudgetSlider(val) { const pct = clampInt(val, 0, 100); data.config.safePct = pct; const lbl = document.getElementById('lbl-safe-pct'); if (lbl) lbl.innerText = pct + "%"; const slider = document.getElementById('slider-safe'); if (slider) slider.value = String(pct); saveData(); }
     function setSafePct(pct) { updateBudgetSlider(pct); }
     function togglePrivacy() { data.config.privacyMode = !data.config.privacyMode; saveData(); }
@@ -848,20 +811,20 @@
       if (data.config.privacyMode) { blurElements.forEach(el => el.classList.add('active')); document.getElementById('btn-privacy').classList.add('active'); } 
       else { blurElements.forEach(el => el.classList.remove('active')); document.getElementById('btn-privacy').classList.remove('active'); }
 
-      document.getElementById('disp-safe').innerText = `₱ ${(stats.safe||0).toLocaleString()}`;
+      document.getElementById('disp-safe').innerText = `₱ ${stats.safe.toLocaleString()}`;
       
       let daysRemaining = 1;
       if (isCurrentMonth) { const now = new Date(); const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0); daysRemaining = Math.max(1, endOfMonth.getDate() - now.getDate() + 1); } 
       else { const endOfMonth = new Date(viewDateObj.getFullYear(), viewDateObj.getMonth() + 1, 0); daysRemaining = endOfMonth.getDate(); }
       document.getElementById('disp-daily').innerText = `₱ ${Math.round(stats.safe > 0 ? (stats.safe / daysRemaining) : 0).toLocaleString()}`;
       
-      document.getElementById('disp-income-val').innerText = `₱ ${(stats.income||0).toLocaleString()}`;
-      document.getElementById('disp-total-exp').innerText = `₱ ${(stats.expenses||0).toLocaleString()}`;
+      document.getElementById('disp-income-val').innerText = `₱ ${stats.income.toLocaleString()}`;
+      document.getElementById('disp-total-exp').innerText = `₱ ${stats.expenses.toLocaleString()}`;
       document.getElementById('disp-runway').innerText = calculateRunway() + " mo";
       
       let totalExpected = 0;
       if (data.config.expectedIncome) {
-          Object.values(data.config.expectedIncome).forEach(v => totalExpected += (v||0));
+          Object.values(data.config.expectedIncome).forEach(v => totalExpected += v);
       }
       if (totalExpected > 0) {
           const incPct = Math.min(100, (stats.income / totalExpected) * 100);
@@ -873,10 +836,10 @@
       const safeText = document.getElementById('disp-safe');
       if (stats.safe < 0) safeText.style.color = "var(--danger)"; else if (stats.limit > 0 && stats.safe < (stats.limit * 0.2)) safeText.style.color = "var(--warning)"; else safeText.style.color = "var(--primary)";
 
-      document.getElementById('disp-total-liquid').innerText = `₱ ${(stats.liquid||0).toLocaleString()}`;
-      document.getElementById('disp-net-worth').innerText = `₱ ${(stats.net||0).toLocaleString()}`;
-      document.getElementById('disp-free-cash').innerText = `₱ ${(stats.free||0).toLocaleString()}`;
-      document.getElementById('disp-frozen-cash').innerText = `₱ ${(stats.frozen||0).toLocaleString()}`;
+      document.getElementById('disp-total-liquid').innerText = `₱ ${stats.liquid.toLocaleString()}`;
+      document.getElementById('disp-net-worth').innerText = `₱ ${stats.net.toLocaleString()}`;
+      document.getElementById('disp-free-cash').innerText = `₱ ${stats.free.toLocaleString()}`;
+      document.getElementById('disp-frozen-cash').innerText = `₱ ${stats.frozen.toLocaleString()}`;
 
       renderQuickPresets();
       renderCategoryBudgets(stats.txs); 
@@ -887,10 +850,7 @@
       renderTxList(stats.txs);
       
       const plMonthSel = document.getElementById('sel-insights-range');
-      if (plMonthSel) { 
-          plMonthSel.innerHTML = `<option value="1">This Month</option><option value="3">Last 3 Months</option><option value="12">This Year (12 Mo)</option><option value="all">All Time</option><optgroup label="Specific Months">` + 
-          (data.history || []).map(h => h && h.id ? `<option value="${h.id}">${h.id}</option>` : '').reverse().join('') + `</optgroup>`; 
-      }
+      if (plMonthSel) { plMonthSel.innerHTML = `<option value="1">This Month</option><option value="3">Last 3 Months</option><option value="12">This Year (12 Mo)</option><option value="all">All Time</option><optgroup label="Specific Months">` + data.history.map(h => `<option value="${h.id}">${h.id}</option>`).reverse().join('') + `</optgroup>`; }
 
       renderTimeline(stats.txs); 
       renderBillList();
@@ -924,7 +884,7 @@
                 <div style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#888; font-weight:bold; margin-bottom:4px; text-transform:uppercase;">
                         <span>${catDef.icon} ${catDef.name}</span>
-                        <span style="color:${isOver ? 'var(--danger)' : '#fff'};">₱${(spent||0).toLocaleString()} / ₱${(limit||0).toLocaleString()}</span>
+                        <span style="color:${isOver ? 'var(--danger)' : '#fff'};">₱${spent.toLocaleString()} / ₱${limit.toLocaleString()}</span>
                     </div>
                     <div style="height:6px; background:#222; border-radius:3px; overflow:hidden;">
                         <div style="width:${pct}%; height:100%; background:${barColor}; transition:width 0.3s;"></div>
@@ -952,7 +912,7 @@
       const wGrid = document.getElementById('jar-grid'); wGrid.innerHTML = "";
       const isCurrentMonth = viewMonth === data.currentMonth;
 
-      (data.jars || []).forEach((jar, i) => {
+      data.jars.forEach((jar, i) => {
         const isPriority = jar.type === 'priority';
         const isReady = !isPriority && jar.target > 0 && (jar.saved >= jar.target);
         const pct = isPriority || jar.target <= 0 ? 100 : Math.min(100, (jar.saved / jar.target) * 100);
@@ -964,7 +924,7 @@
 
         let ruleHtml = '';
         if (jar.ruleType === 'pct') ruleHtml = `⚡ Auto: ${jar.ruleAmt}% of bank deposits`;
-        else if (jar.ruleType === 'fixed') ruleHtml = `⚡ Auto: ₱${(jar.ruleAmt||0).toLocaleString()} of bank deposits`;
+        else if (jar.ruleType === 'fixed') ruleHtml = `⚡ Auto: ₱${jar.ruleAmt.toLocaleString()} of bank deposits`;
         if (ruleHtml) ruleHtml = `<div style="font-size:0.6rem; color:var(--success); margin-top:2px;">${ruleHtml}</div>`;
 
         let paceHtml = '';
@@ -977,13 +937,13 @@
 
         const borderColor = isPriority ? 'var(--success)' : (isReady ? 'var(--gold)' : '#333');
         const icon = isPriority ? '🛡️' : (isReady ? '🎁' : '🧞');
-        const targetText = isPriority || !jar.target || jar.target <= 0 ? '' : ` / ₱${(jar.target||0).toLocaleString()}`;
+        const targetText = isPriority || jar.target <= 0 ? '' : ` / ₱${jar.target.toLocaleString()}`;
 
         const cardHtml = `
           <div class="card" style="padding:15px; margin:0; cursor:${isCurrentMonth ? 'pointer' : 'default'}; border:1px solid ${borderColor}; position:relative;" ${isCurrentMonth ? `onclick="openManageJar(${i})"` : ''}>
             <div style="font-size:1.5rem; margin-bottom:5px;">${icon}</div>
             <div class="bold" style="font-size:1rem;">${jar.name}</div>
-            <div class="label" style="margin-top:5px; color:#fff;">₱${(jar.saved||0).toLocaleString()}${targetText}</div>
+            <div class="label" style="margin-top:5px; color:#fff;">₱${jar.saved.toLocaleString()}${targetText}</div>
             ${ruleHtml} ${paceHtml} ${actionHtml}
           </div>`;
 
@@ -997,7 +957,7 @@
       grid.innerHTML = data.debts.map((d, i) => `
         <div class="tx-item" style="border-left:4px solid var(--danger); background:#1a1111; cursor:pointer;" onclick="payDebt(${i})">
           <div style="flex:1"><div class="bold">${d.name}</div><div class="label">TAP TO PAY</div></div>
-          <div class="mono bold text-red">₱${(d.balance||0).toLocaleString()}</div>
+          <div class="mono bold text-red">₱${d.balance.toLocaleString()}</div>
         </div>
       `).join('');
     }
@@ -1021,7 +981,7 @@
       if (assets.length === 0) { list.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No assets logged this month.</div>`; return; }
       assets.forEach(tx => {
           const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
-          list.innerHTML += `<div class="tx-item" style="border: 1px solid rgba(255, 214, 10, 0.3);"><div class="icon-box icon-asset">${tx.catIcon || '📦'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${new Date(tx.date).toLocaleDateString()}</div></div><div class="mono bold text-gold blur-sensitive">-₱${(tx.amount||0).toLocaleString()}</div>${del}</div>`;
+          list.innerHTML += `<div class="tx-item" style="border: 1px solid rgba(255, 214, 10, 0.3);"><div class="icon-box icon-asset">${tx.catIcon || '📦'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${new Date(tx.date).toLocaleDateString()}</div></div><div class="mono bold text-gold blur-sensitive">-₱${tx.amount.toLocaleString()}</div>${del}</div>`;
       });
     }
 
@@ -1035,7 +995,7 @@
         groups[date].forEach(tx => {
           const c = tx.type === 'exp' ? 'icon-exp' : 'icon-inc'; const ac = tx.type === 'exp' ? 'text-red' : 'text-teal'; const s = tx.type === 'exp' ? '-' : '+';
           const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
-          list.innerHTML += `<div class="tx-item"><div class="icon-box ${c}">${tx.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${(tx.catId || 'GENERAL').toUpperCase()}</div></div><div class="mono bold ${ac} blur-sensitive">${s}₱${(tx.amount||0).toLocaleString()}</div>${del}</div>`;
+          list.innerHTML += `<div class="tx-item"><div class="icon-box ${c}">${tx.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${(tx.catId || 'GENERAL').toUpperCase()}</div></div><div class="mono bold ${ac} blur-sensitive">${s}₱${tx.amount.toLocaleString()}</div>${del}</div>`;
         });
       });
     }
@@ -1054,13 +1014,13 @@
       else if (range === 'all') { histToUse = data.history.concat([currObj]); } 
       else {
           if (range === data.currentMonth) { histToUse = [currObj]; } 
-          else { const h = data.history.find(x => x && x.id === range); if (h) histToUse = [h]; }
+          else { const h = data.history.find(x => x.id === range); if (h) histToUse = [h]; }
       }
 
-      labels = histToUse.map(h => h && h.id ? h.id.split(' ')[0] : '?');
-      incData = histToUse.map(h => h && h.stats ? (h.stats.income || 0) : 0);
-      expData = histToUse.map(h => h && h.stats ? (h.stats.expenses || 0) : 0);
-      histToUse.forEach(h => { if (h && h.txs) targetTxs = targetTxs.concat(h.txs); });
+      labels = histToUse.map(h => h.id.split(' ')[0]);
+      incData = histToUse.map(h => h.stats?.income || 0);
+      expData = histToUse.map(h => h.stats?.expenses || 0);
+      histToUse.forEach(h => { if (h.txs) targetTxs = targetTxs.concat(h.txs); });
 
       const ctx = document.getElementById('chart-insights').getContext('2d');
       if(chartInsights) chartInsights.destroy();
@@ -1083,7 +1043,7 @@
           plList.innerHTML = Object.entries(streams).map(([name, val]) => `
             <div class="tx-item" style="background:#0a1a1a; border-left:3px solid var(--primary);">
               <div style="flex:1"><div class="bold">${name}</div></div>
-              <div class="mono bold text-teal">₱${(val||0).toLocaleString()}</div>
+              <div class="mono bold text-teal">₱${val.toLocaleString()}</div>
             </div>
           `).join('');
       }
@@ -1095,15 +1055,15 @@
       const dailySpend = {};
       if (txs) {
           txs.forEach(t => {
-              if(t.type === 'exp' && t.catId !== 'bill' && t.catId !== 'transfer' && t.date) {
+              if(t.type === 'exp' && t.catId !== 'bill' && t.catId !== 'transfer') {
                   const d = new Date(t.date).getDate();
-                  if(!isNaN(d)) dailySpend[d] = (dailySpend[d] || 0) + (t.amount || 0);
+                  dailySpend[d] = (dailySpend[d] || 0) + (t.amount || 0);
               }
           });
       }
 
       for (let i = 1; i <= 31; i++) {
-        const hasBill = (data.bills || []).some(b => b.day === i); 
+        const hasBill = data.bills.some(b => b.day === i); 
         let bc = i === today ? "var(--primary)" : "#333"; 
         let tc = i === today ? "var(--primary)" : "#666";
         let bg = 'transparent';
@@ -1122,9 +1082,9 @@
     function renderBillList() {
       const list = document.getElementById('bill-list'); list.innerHTML = ""; const today = new Date().getDate();
       if (!data.bills) return;
-      data.bills.slice().sort((a, b) => (a.day||0) - (b.day||0)).forEach((b, i) => {
+      data.bills.slice().sort((a, b) => a.day - b.day).forEach((b, i) => {
         const isPaid = b.lastPaidMonth === data.currentMonth;
-        const diff = (b.day||0) - today; 
+        const diff = b.day - today; 
         const status = isPaid ? "Paid" : (today > b.day ? "Past Due" : (diff <= 3 ? `Due in ${diff} days` : `Due Day ${b.day}`)); 
         const color = isPaid ? "var(--success)" : (today > b.day ? "#666" : (diff <= 3 ? "var(--warning)" : "var(--primary)"));
         
@@ -1134,7 +1094,7 @@
                 <div class="bill-checkbox ${isPaid ? 'paid' : ''}" onclick="markBillPaid(${data.bills.indexOf(b)})"></div>
                 <div><div class="bold" style="${isPaid ? 'text-decoration:line-through; color:#666;' : ''}">${b.name}</div><div class="label" style="color:${color}">${status}</div></div>
             </div>
-            <div style="display:flex; align-items:center;"><span class="mono bold" style="${isPaid ? 'color:#666;' : ''}">₱${(b.amount||0).toLocaleString()}</span><span style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteBill(${data.bills.indexOf(b)})">✕</span></div>
+            <div style="display:flex; align-items:center;"><span class="mono bold" style="${isPaid ? 'color:#666;' : ''}">₱${b.amount.toLocaleString()}</span><span style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteBill(${data.bills.indexOf(b)})">✕</span></div>
           </div>`;
       });
     }
@@ -1222,7 +1182,7 @@
       let matches = []; data.transactions.forEach(t => matches.push({ ...t, src: 'Current' })); data.history.forEach(h => (h.txs || []).forEach(t => matches.push({ ...t, src: h.id })));
       const needle = q.toLowerCase(); matches = matches.filter(m => (m.title || '').toLowerCase().includes(needle));
       if (matches.length === 0) { res.innerHTML = "<div style='text-align:center;margin-top:20px;color:#666'>No matches</div>"; return; }
-      matches.forEach(m => { const c = m.type === 'exp' ? 'text-red' : 'text-teal'; const s = m.type === 'exp' ? '-' : '+'; res.innerHTML += `<div class="tx-item"><div class="bold" style="font-size:1.2rem; margin-right:10px;">${m.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${m.title}</div><div class="label">${m.src}</div></div><div class="mono bold ${c}">${s}₱${(m.amount||0).toLocaleString()}</div></div>`; });
+      matches.forEach(m => { const c = m.type === 'exp' ? 'text-red' : 'text-teal'; const s = m.type === 'exp' ? '-' : '+'; res.innerHTML += `<div class="tx-item"><div class="bold" style="font-size:1.2rem; margin-right:10px;">${m.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${m.title}</div><div class="label">${m.src}</div></div><div class="mono bold ${c}">${s}₱${m.amount.toLocaleString()}</div></div>`; });
     }
   </script>
 </body>
