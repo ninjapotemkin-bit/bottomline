@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Bottom Line v26 (Ironclad Edition)</title>
+  <title>Bottom Line v28 (Crash-Proof Architect)</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    /* --- 1. THEME ENGINE --- */
+    /* --- THEME ENGINE --- */
     :root {
       --bg-body: #000000; --bg-surface: #111111;
       --primary: #00E5FF; --danger: #FF3B30; --warning: #FF9F0A;
@@ -27,8 +27,7 @@
     .text-red { color: var(--danger); } .text-teal { color: var(--primary); } .text-gold { color: var(--gold); }
 
     .mobile-frame { width: 100%; max-width: 480px; height: 100dvh; background: var(--bg-body); position: relative; display: flex; flex-direction: column; border: 1px solid #222; overflow: hidden; }
-    
-    .scroll-area { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; scrollbar-width: none; }
+    .scroll-area { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; padding-bottom: 140px; scrollbar-width: none; }
     .scroll-area::-webkit-scrollbar { display: none; }
 
     .app-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 10px 24px; z-index: 50; }
@@ -86,14 +85,9 @@
     .chip { flex: 0 0 auto; padding: 10px 15px; border-radius: 14px; background: #1f1f1f; border: 1px solid #333; color: #ddd; font-weight: 800; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
     .chip:active { transform: scale(0.98); }
 
-    .jar-cancel-btn { position: absolute; top: 12px; right: 15px; color: #888; cursor: pointer; font-size: 1.2rem; z-index: 10; }
-
     .bill-checkbox { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #555; margin-right: 15px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; }
     .bill-checkbox.paid { background: var(--success); border-color: var(--success); }
     .bill-checkbox.paid::after { content: '✓'; color: #000; font-size: 0.8rem; font-weight: bold; }
-    
-    /* Layout fix */
-    .bottom-spacer { width: 100%; height: 120px; flex-shrink: 0; }
   </style>
 </head>
 
@@ -114,7 +108,6 @@
 
     <div class="scroll-area" id="main-scroll">
 
-      <!-- HOME TAB -->
       <div id="view-home" class="view-section">
         <div class="card" style="background: linear-gradient(145deg, #1A1A1A, #0d0d0d); padding: 24px; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -155,11 +148,8 @@
 
         <div class="section-title">ACTIVITY</div>
         <div id="tx-list"></div>
-        
-        <div class="bottom-spacer"></div>
       </div>
 
-      <!-- SAVINGS TAB -->
       <div id="view-savings" class="view-section hidden">
         <div class="asset-card">
           <div class="label" style="color:var(--gold);">TOTAL LIQUIDITY (BANK)</div>
@@ -189,11 +179,8 @@
         <div id="asset-list"></div>
         <div class="section-title" style="margin-top:40px;">TROPHY ROOM</div>
         <div id="trophy-list"></div>
-        
-        <div class="bottom-spacer"></div>
       </div>
 
-      <!-- INSIGHTS & SEARCH TAB -->
       <div id="view-insights" class="view-section hidden">
         <div class="section-title" style="margin-top:0;">SEARCH HISTORY</div>
         <input type="text" id="inp-search" placeholder="🔍 Search any transaction..." onkeyup="runSearchInline(this.value)" style="margin-bottom: 20px;">
@@ -209,11 +196,8 @@
         
         <div class="section-title" style="margin-top:30px;">HUSTLE P&L</div>
         <div id="pl-list" style="margin-top:15px;"></div>
-        
-        <div class="bottom-spacer"></div>
       </div>
 
-      <!-- BILLS TAB -->
       <div id="view-bills" class="view-section hidden">
         <div class="section-title">DAILY SPENDING HEATMAP</div>
         <div id="timeline-scroll" style="display:flex; overflow-x:auto; gap:8px; padding-bottom:15px; margin-bottom:15px;"></div>
@@ -221,8 +205,6 @@
         <div class="section-title">RECURRING BILLS</div>
         <div id="bill-list"></div>
         <button class="btn btn-glass" style="margin-top:20px; border-style:dashed;" onclick="openNewBill()">+ Add Bill</button>
-        
-        <div class="bottom-spacer"></div>
       </div>
 
     </div>
@@ -237,7 +219,6 @@
   </div>
   <div class="fab" id="main-fab" onclick="openNewTx()">+</div>
 
-  <!-- MODALS -->
   <div class="modal-overlay" id="modal-settle" onclick="closeModal(event, 'modal-settle')">
     <div class="modal-sheet">
       <h2>Month Settlement</h2>
@@ -254,11 +235,13 @@
       <h2 id="modal-jar-header">New Fund</h2>
       <input type="hidden" id="inp-jar-type">
       <input type="text" id="inp-jar-name" placeholder="Name (e.g. Emergency Fund)">
+      
       <div id="div-jar-target-container">
           <input type="number" id="inp-jar-target" placeholder="Target Cost (₱)">
           <div class="label" style="margin-top:10px;">GOAL DATE (DEADLINE)</div>
           <input type="date" id="inp-jar-date" style="font-family:'Inter', sans-serif;">
       </div>
+      
       <div class="label" style="margin-top:10px;">VAULT INTERCEPT RULE</div>
       <div style="display:flex; gap:10px; margin-bottom:10px;">
         <select id="inp-jar-ruletype" style="margin-bottom:0; font-size:0.9rem;">
@@ -277,19 +260,22 @@
     <div class="modal-sheet">
       <h2 id="manage-jar-title">Manage Wish</h2>
       <input type="hidden" id="manage-jar-index">
+      
       <div class="label" style="margin-top:10px;">ADJUST SAVED AMOUNT (₱)</div>
       <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button class="btn btn-glass" style="padding:10px; border-color:transparent;" id="btn-jar-adj-add" onclick="setJarAdjMode('add')">+ Add</button>
         <button class="btn btn-glass" style="padding:10px; border-color:transparent;" id="btn-jar-adj-sub" onclick="setJarAdjMode('sub')">- Minus</button>
         <button class="btn btn-glass" style="padding:10px; border-color:var(--primary);" id="btn-jar-adj-set" onclick="setJarAdjMode('set')">Set Total</button>
       </div>
-      <input type="text" id="inp-manage-jar-saved" placeholder="Amount">
+      <input type="number" id="inp-manage-jar-saved" placeholder="Amount">
+
       <div id="div-manage-target-container">
           <div class="label" style="margin-top:10px;">EDIT TARGET COST (₱)</div>
           <input type="number" id="inp-manage-jar-target">
           <div class="label" style="margin-top:10px;">EDIT GOAL DATE</div>
           <input type="date" id="inp-manage-jar-date" style="font-family:'Inter', sans-serif;">
       </div>
+      
       <div class="label" style="margin-top:10px;">EDIT VAULT INTERCEPT RULE</div>
       <div style="display:flex; gap:10px; margin-bottom:20px;">
         <select id="inp-manage-jar-ruletype" style="margin-bottom:0; font-size:0.9rem;">
@@ -299,6 +285,7 @@
         </select>
         <input type="number" id="inp-manage-jar-ruleamt" placeholder="Value" style="margin-bottom:0;">
       </div>
+      
       <button class="btn btn-primary" style="background:var(--purple); color:white; margin-bottom:10px;" onclick="updateJar()">Save Changes</button>
       <button class="btn btn-glass" style="color:var(--danger); border-color:var(--danger);" onclick="deleteJarFromManage()">Delete</button>
     </div>
@@ -311,18 +298,22 @@
         <div id="btn-type-exp" class="btn" onclick="setTxType('exp')">Expense</div>
         <div id="btn-type-inc" class="btn" onclick="setTxType('inc')">Income</div>
       </div>
+      
       <div id="inc-stream-select" class="hidden" style="margin-bottom:15px;">
         <div class="label">INCOME SOURCE</div>
         <select id="inp-tx-stream" onchange="handleCustomStream()"></select>
       </div>
+
       <div class="cat-grid" id="cat-list"></div>
       <input type="text" id="inp-tx-title" placeholder="Note">
       <p style="color:#666; font-size:0.8rem; margin-bottom:5px;">Amount (You can use math like 150+50)</p>
       <input type="text" id="inp-tx-amt" placeholder="Amount (e.g. 500 or 250*2)">
+      
       <div id="asset-toggle-container" class="toggle-container" onclick="toggleAssetMode()">
         <div><div style="font-weight:600; font-size:0.9rem;">Mark as Asset</div><div style="font-size:0.7rem; color:#888;">(Deducts from Bank, not Budget)</div></div>
         <div class="toggle-switch"></div>
       </div>
+
       <button class="btn btn-primary" id="btn-save-tx" onclick="saveTransaction()">SAVE</button>
     </div>
   </div>
@@ -336,7 +327,7 @@
         <button class="btn btn-glass" style="padding:10px; border-color:transparent;" id="btn-adj-sub" onclick="setAdjMode('sub')">- Minus</button>
         <button class="btn btn-glass" style="padding:10px; border-color:var(--primary);" id="btn-adj-set" onclick="setAdjMode('set')">Set Total</button>
       </div>
-      <input type="text" id="inp-adjust-amt" placeholder="Enter Amount">
+      <input type="number" id="inp-adjust-amt" placeholder="Enter Amount">
       <button class="btn btn-primary" onclick="saveAdjustment()">Apply Update</button>
     </div>
   </div>
@@ -412,6 +403,15 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="modal-debt" onclick="closeModal(event, 'modal-debt')">
+    <div class="modal-sheet">
+      <h2>Add Liability</h2>
+      <input type="text" id="inp-debt-name" placeholder="Name (e.g. Credit Card)">
+      <input type="number" id="inp-debt-bal" placeholder="Current Balance Owed (₱)">
+      <button class="btn btn-primary" style="background:var(--danger); color:white;" onclick="saveNewDebt()">Save Liability</button>
+    </div>
+  </div>
+
   <script>
     const VERSION = 'bl_asset_v11'; 
 
@@ -426,7 +426,6 @@
     };
 
     let data = {};
-
     let viewMonth = ""; let viewDateObj = new Date();
     let isExpense = true; let selectedCat = CATEGORIES.exp[0]; let chartInstance = null; let chartInsights = null;
     let adjMode = 'set'; let jarAdjMode = 'set'; let isAssetTx = false;
@@ -440,54 +439,50 @@
 
     function loadData() {
       const saved = localStorage.getItem(VERSION);
-      if (saved) {
-        try {
-            data = JSON.parse(saved);
-        } catch (e) {
-            console.error("Data parse error", e);
-            data = {};
-        }
-      }
+      if (saved) { try { data = JSON.parse(saved); } catch (e) { data = {}; } }
       
-      // IRONCLAD FALLBACKS & SANITIZATION
+      // ✅ IRONCLAD FALLBACKS & ARRAY SANITIZATION
       if (!data) data = {};
       if (!data.config) data.config = {};
       
-      // Force numerical conversions
-      data.config.baseIncome = isNaN(parseFloat(data.config.baseIncome)) ? 0 : parseFloat(data.config.baseIncome);
-      data.config.safePct = isNaN(parseInt(data.config.safePct)) ? 50 : parseInt(data.config.safePct);
-      data.config.rollover = isNaN(parseFloat(data.config.rollover)) ? 0 : parseFloat(data.config.rollover);
+      data.config.baseIncome = parseFloat(data.config.baseIncome) || 0;
+      data.config.safePct = parseInt(data.config.safePct) || 50;
+      data.config.rollover = parseFloat(data.config.rollover) || 0;
       
-      if (!data.config.customStreams) data.config.customStreams = ["Salary", "Agency", "Content"];
-      if (!data.config.customPresets) data.config.customPresets = [];
-      if (!data.config.expectedIncome) data.config.expectedIncome = {};
-      if (!data.config.categoryBudgets) data.config.categoryBudgets = {};
+      data.config.customStreams = (data.config.customStreams || []).filter(s => s && typeof s === 'string');
+      if (data.config.customStreams.length === 0) data.config.customStreams = ["Salary", "Agency", "Content"];
       
-      if (!data.transactions) data.transactions = [];
-      if (!data.bills) data.bills = [];
-      if (!data.debts) data.debts = [];
-      if (!data.trophyRoom) data.trophyRoom = [];
-      if (!data.history) data.history = [];
+      data.config.customPresets = (data.config.customPresets || []).filter(p => p && typeof p === 'object');
+      data.config.expectedIncome = data.config.expectedIncome || {};
+      data.config.categoryBudgets = data.config.categoryBudgets || {};
       
-      data.liquidCash = isNaN(parseFloat(data.liquidCash)) ? 0 : parseFloat(data.liquidCash);
-      if (!data.currentMonth) data.currentMonth = getMonthLabel(new Date());
+      data.transactions = (data.transactions || []).filter(t => t && typeof t === 'object');
+      data.history = (data.history || []).filter(h => h && typeof h === 'object');
+      data.trophyRoom = (data.trophyRoom || []).filter(t => t && typeof t === 'object');
+      data.liquidCash = parseFloat(data.liquidCash) || 0;
+      data.currentMonth = data.currentMonth || getMonthLabel(new Date());
 
-      // Rescue Legacy Jars & sanitize numbers
-      if (!data.jars) data.jars = [];
-      data.jars.forEach(j => { 
-          j.saved = isNaN(parseFloat(j.saved)) ? 0 : parseFloat(j.saved);
-          j.target = isNaN(parseFloat(j.target)) ? 0 : parseFloat(j.target);
-          if(j.type !== 'priority' && j.type !== 'wish') j.type = 'wish'; 
-      }); 
-      
-      data.bills.forEach(b => { 
-          b.amount = isNaN(parseFloat(b.amount)) ? 0 : parseFloat(b.amount);
-          if(b.lastPaidMonth === undefined) b.lastPaidMonth = ""; 
-      });
-      
-      data.debts.forEach(d => {
-          d.balance = isNaN(parseFloat(d.balance)) ? 0 : parseFloat(d.balance);
-      });
+      // Safe Map Jars
+      data.jars = (data.jars || []).filter(j => j && typeof j === 'object').map(j => ({
+          ...j,
+          saved: parseFloat(j.saved) || 0,
+          target: parseFloat(j.target) || 0,
+          ruleAmt: parseFloat(j.ruleAmt) || 0,
+          type: (j.type === 'priority' || j.type === 'wish') ? j.type : 'wish'
+      }));
+
+      // Safe Map Bills
+      data.bills = (data.bills || []).filter(b => b && typeof b === 'object').map(b => ({
+          ...b,
+          amount: parseFloat(b.amount) || 0,
+          lastPaidMonth: b.lastPaidMonth || ""
+      }));
+
+      // Safe Map Debts
+      data.debts = (data.debts || []).filter(d => d && typeof d === 'object').map(d => ({
+          ...d,
+          balance: parseFloat(d.balance) || 0
+      }));
     }
 
     function saveData() { localStorage.setItem(VERSION, JSON.stringify(data)); renderUI(); }
@@ -515,18 +510,18 @@
       }
 
       const budgetTxs = activeTxs.filter(t => t.type !== 'asset');
-      const extraInc = budgetTxs.filter(t => t.type === 'inc').reduce((s, t) => s + (t.amount || 0), 0);
+      const extraInc = budgetTxs.filter(t => t.type === 'inc').reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
       const totalIncome = monthlyBase + baseRollover + extraInc;
       
-      const dailyExp = budgetTxs.filter(t => t.type === 'exp').reduce((s, t) => s + (t.amount || 0), 0);
+      const dailyExp = budgetTxs.filter(t => t.type === 'exp').reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
       const limit = totalIncome * (clampInt(data.config.safePct, 0, 100) / 100);
-      const safe = limit - dailyExp;
+      const safe = isNaN(limit - dailyExp) ? 0 : (limit - dailyExp);
 
-      const frozenCash = data.jars.reduce((s, j) => s + (j.saved || 0), 0);
-      const debtTotal = data.debts.reduce((s, d) => s + (d.balance || 0), 0);
+      const frozenCash = data.jars.reduce((s, j) => s + (parseFloat(j.saved) || 0), 0);
+      const debtTotal = data.debts.reduce((s, d) => s + (parseFloat(d.balance) || 0), 0);
       
-      const freeCash = snapshotLiquid - frozenCash;
-      const netWorth = snapshotLiquid - debtTotal;
+      const freeCash = isNaN(snapshotLiquid - frozenCash) ? 0 : (snapshotLiquid - frozenCash);
+      const netWorth = isNaN(snapshotLiquid - debtTotal) ? 0 : (snapshotLiquid - debtTotal);
 
       return { income: totalIncome, expenses: dailyExp, limit, safe, liquid: snapshotLiquid, frozen: frozenCash, free: freeCash, net: netWorth, txs: activeTxs };
     }
@@ -534,11 +529,11 @@
     function calculateRunway() {
         let totalSpend = 0; let monthsCounted = 0;
         const currentBudgetTxs = data.transactions.filter(t => t.type === 'exp');
-        if (currentBudgetTxs.length > 0) { totalSpend += currentBudgetTxs.reduce((s, t) => s + (t.amount || 0), 0); monthsCounted++; }
+        if (currentBudgetTxs.length > 0) { totalSpend += currentBudgetTxs.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0); monthsCounted++; }
         for (let i = 0; i < Math.min(3, data.history.length); i++) {
             const h = data.history[data.history.length - 1 - i];
             if (h && h.txs) {
-                const histExp = h.txs.filter(t => t.type === 'exp').reduce((s, t) => s + (t.amount || 0), 0);
+                const histExp = h.txs.filter(t => t.type === 'exp').reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
                 if (histExp > 0) { totalSpend += histExp; monthsCounted++; }
             }
         }
@@ -588,7 +583,6 @@
       data.transactions = []; data.currentMonth = realMonth; viewMonth = realMonth;
       
       data.bills.forEach(b => b.lastPaidMonth = "");
-      
       closeModal(null, 'modal-settle'); saveData();
     }
 
@@ -612,6 +606,8 @@
 
     function openNewJar(type) {
         document.getElementById('inp-jar-type').value = type;
+        document.getElementById('inp-jar-name').value = ""; document.getElementById('inp-jar-target').value = ""; document.getElementById('inp-jar-date').value = ""; document.getElementById('inp-jar-ruleamt').value = "";
+        
         if (type === 'priority') {
             document.getElementById('modal-jar-header').innerText = "New Priority Fund"; document.getElementById('div-jar-target-container').style.display = 'none'; document.getElementById('btn-save-new-jar').style.background = "var(--success)"; document.getElementById('lbl-jar-rule-desc').innerText = "Priority funds get first dibs. They intercept money before Wish Jars.";
         } else {
@@ -621,8 +617,17 @@
     }
 
     function saveJar() {
-      const type = document.getElementById('inp-jar-type').value; const n = document.getElementById('inp-jar-name').value.trim(); const t = parseFloat(document.getElementById('inp-jar-target').value) || 0; const goalDate = document.getElementById('inp-jar-date').value; const rType = document.getElementById('inp-jar-ruletype').value; const rAmt = parseFloat(document.getElementById('inp-jar-ruleamt').value) || 0;
-      if (n) { data.jars.push({ type: type, name: n, target: type==='priority'? 0 : t, saved: 0, dateCreated: new Date().toISOString(), goalDate: goalDate || null, ruleType: rType, ruleAmt: rAmt }); closeModal(null, 'modal-jar'); saveData(); }
+      const type = document.getElementById('inp-jar-type').value; 
+      const n = document.getElementById('inp-jar-name').value.trim(); 
+      const t = parseFloat(document.getElementById('inp-jar-target').value) || 0; 
+      const goalDate = document.getElementById('inp-jar-date').value; 
+      const rType = document.getElementById('inp-jar-ruletype').value; 
+      const rAmt = parseFloat(document.getElementById('inp-jar-ruleamt').value) || 0;
+      
+      if (n) { 
+        data.jars.push({ type: type, name: n, target: type==='priority'? 0 : t, saved: 0, dateCreated: new Date().toISOString(), goalDate: goalDate || null, ruleType: rType, ruleAmt: rAmt }); 
+        closeModal(null, 'modal-jar'); saveData(); 
+      } else { alert("Please provide a name."); }
     }
 
     function openManageJar(index) {
@@ -654,7 +659,7 @@
         }
 
         if (jar.type === 'wish' && jar.target > 0 && jar.saved >= jar.target) {
-            if (confirm(`CLAIM REWARD: Buy "${jar.name}" for ₱${jar.saved.toLocaleString()}?\n\nThis will deduct the amount from your Bank and move it to the Trophy Room.`)) {
+            if (confirm(`CLAIM REWARD: Buy "${jar.name}" for ₱${(jar.saved||0).toLocaleString()}?\n\nThis will deduct the amount from your Bank and move it to the Trophy Room.`)) {
                 data.liquidCash -= jar.saved; data.trophyRoom.unshift({ ...jar, dateBought: new Date().toISOString() }); data.jars.splice(idx, 1);
                 closeModal(null, 'modal-manage-jar'); saveData(); return;
             }
@@ -665,12 +670,18 @@
     function deleteJarFromManage() { const idx = document.getElementById('manage-jar-index').value; if (idx !== "" && confirm("Cancel this fund? Saved cash will remain in Bank.")) { data.jars.splice(idx, 1); closeModal(null, 'modal-manage-jar'); saveData(); } }
     
     function openNewDebt() {
-      const name = prompt("Name of liability (e.g. Credit Card):"); const balance = prompt("Current balance owed (₱):");
-      if(name && !isNaN(parseFloat(balance))) { data.debts.push({ name, balance: parseFloat(balance) }); saveData(); }
+        document.getElementById('inp-debt-name').value = ""; document.getElementById('inp-debt-bal').value = ""; openModal('modal-debt');
+    }
+    
+    function saveNewDebt() {
+      const name = document.getElementById('inp-debt-name').value.trim(); const balance = parseFloat(document.getElementById('inp-debt-bal').value) || 0;
+      if(name && balance > 0) { data.debts.push({ name, balance }); closeModal(null, 'modal-debt'); saveData(); }
     }
 
     function payDebt(i) {
-      const amt = parseFloat(prompt(`Pay off ${data.debts[i].name}? Enter payment:`));
+      const rawAmt = prompt(`Pay off ${data.debts[i].name}? Enter payment:`);
+      if(!rawAmt) return;
+      const amt = parseFloat(rawAmt.replace(/[^\d.-]/g, ''));
       if(amt && !isNaN(amt)) {
           if (amt > data.liquidCash) return alert("Not enough cash in bank to make this payment.");
           data.liquidCash -= amt; data.debts[i].balance -= amt; 
@@ -737,7 +748,16 @@
     }
     function deleteTx(i) { if (confirm("Delete?")) { if(data.transactions[i].type === 'asset') data.liquidCash += data.transactions[i].amount; data.transactions.splice(i, 1); saveData(); } }
     
-    function saveBill() { const n = document.getElementById('inp-bill-name').value.trim(); const rawAmt = document.getElementById('inp-bill-amt').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {} const d = parseInt(document.getElementById('inp-bill-day').value, 10) || 1; if (n && !isNaN(a)) { data.bills.push({ name: n, amount: a, day: d, lastPaidMonth: "" }); closeModal(null, 'modal-bill'); saveData(); } }
+    function saveBill() { 
+        const n = document.getElementById('inp-bill-name').value.trim(); 
+        const a = parseFloat(document.getElementById('inp-bill-amt').value) || 0;
+        const d = parseInt(document.getElementById('inp-bill-day').value, 10) || 1; 
+        if (n && a > 0) { 
+            data.bills.push({ name: n, amount: a, day: d, lastPaidMonth: "" }); 
+            document.getElementById('inp-bill-name').value = ""; document.getElementById('inp-bill-amt').value = ""; document.getElementById('inp-bill-day').value = "";
+            closeModal(null, 'modal-bill'); saveData(); 
+        } 
+    }
     function deleteBill(i) { if (confirm("Remove bill?")) { data.bills.splice(i, 1); saveData(); } }
     
     function markBillPaid(i) {
@@ -761,15 +781,14 @@
     function saveAdjustment() {
       const rawAmt = document.getElementById('inp-adjust-amt').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
       if (!isNaN(a)) { 
-        if (adjMode === 'add') { data.liquidCash += a; runVaultIntercept(a); } else if (adjMode === 'sub') data.liquidCash -= a; else data.liquidCash = a;
+        if (adjMode === 'add') { data.liquidCash += a; runVaultIntercept(a); } else if (adjMode === 'sub') { data.liquidCash -= a; } else { data.liquidCash = a; }
         closeModal(null, 'modal-adjust'); document.getElementById('inp-adjust-amt').value = ""; saveData(); 
       }
     }
 
     function saveIncome() { 
-        const rawAmt = document.getElementById('inp-income-setting').value; 
-        let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {} 
-        if (!isNaN(a)) { data.config.baseIncome = a; closeModal(null, 'modal-income'); saveData(); } 
+        const a = parseFloat(document.getElementById('inp-income-setting').value) || 0;
+        data.config.baseIncome = a; closeModal(null, 'modal-income'); saveData(); 
     }
     
     function transferFromBank() {
@@ -780,7 +799,7 @@
         closeModal(null, 'modal-income'); document.getElementById('inp-transfer-amt').value = ""; saveData();
       }
     }
-    function overrideRollover() { const rawAmt = document.getElementById('inp-rollover-override').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {} if (!isNaN(a)) { data.config.rollover = a; closeModal(null, 'modal-income'); document.getElementById('inp-rollover-override').value = ""; saveData(); } }
+    function overrideRollover() { const a = parseFloat(document.getElementById('inp-rollover-override').value) || 0; data.config.rollover = a; closeModal(null, 'modal-income'); document.getElementById('inp-rollover-override').value = ""; saveData(); }
     function updateBudgetSlider(val) { const pct = clampInt(val, 0, 100); data.config.safePct = pct; const lbl = document.getElementById('lbl-safe-pct'); if (lbl) lbl.innerText = pct + "%"; const slider = document.getElementById('slider-safe'); if (slider) slider.value = String(pct); saveData(); }
     function setSafePct(pct) { updateBudgetSlider(pct); }
     function togglePrivacy() { data.config.privacyMode = !data.config.privacyMode; saveData(); }
@@ -799,122 +818,101 @@
     }
     function hardReset() { if (confirm("Delete All?")) { localStorage.removeItem(VERSION); location.reload(); } }
 
-    // --- UI ENGINE ---
+    // --- UI ENGINE (SHIELDED) ---
     function renderUI() {
-      const stats = calculateStats(); const isCurrentMonth = viewMonth === data.currentMonth;
+      let stats;
+      try {
+          stats = calculateStats(); const isCurrentMonth = viewMonth === data.currentMonth;
 
-      document.getElementById('lbl-month-display').innerText = viewMonth;
-      document.getElementById('main-fab').style.display = isCurrentMonth ? 'flex' : 'none';
-      document.getElementById('div-update-bank-btn').style.display = isCurrentMonth ? 'block' : 'none';
+          document.getElementById('lbl-month-display').innerText = viewMonth;
+          document.getElementById('main-fab').style.display = isCurrentMonth ? 'flex' : 'none';
+          document.getElementById('div-update-bank-btn').style.display = isCurrentMonth ? 'block' : 'none';
 
-      const blurElements = document.querySelectorAll('.blur-sensitive');
-      if (data.config.privacyMode) { blurElements.forEach(el => el.classList.add('active')); document.getElementById('btn-privacy').classList.add('active'); } 
-      else { blurElements.forEach(el => el.classList.remove('active')); document.getElementById('btn-privacy').classList.remove('active'); }
+          const blurElements = document.querySelectorAll('.blur-sensitive');
+          if (data.config.privacyMode) { blurElements.forEach(el => el.classList.add('active')); document.getElementById('btn-privacy').classList.add('active'); } 
+          else { blurElements.forEach(el => el.classList.remove('active')); document.getElementById('btn-privacy').classList.remove('active'); }
 
-      document.getElementById('disp-safe').innerText = `₱ ${stats.safe.toLocaleString()}`;
+          document.getElementById('disp-safe').innerText = `₱ ${(stats.safe||0).toLocaleString()}`;
+          
+          let daysRemaining = 1;
+          if (isCurrentMonth) { const now = new Date(); const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0); daysRemaining = Math.max(1, endOfMonth.getDate() - now.getDate() + 1); } 
+          else { const endOfMonth = new Date(viewDateObj.getFullYear(), viewDateObj.getMonth() + 1, 0); daysRemaining = endOfMonth.getDate(); }
+          document.getElementById('disp-daily').innerText = `₱ ${Math.round(stats.safe > 0 ? (stats.safe / daysRemaining) : 0).toLocaleString()}`;
+          
+          document.getElementById('disp-income-val').innerText = `₱ ${(stats.income||0).toLocaleString()}`;
+          document.getElementById('disp-total-exp').innerText = `₱ ${(stats.expenses||0).toLocaleString()}`;
+          document.getElementById('disp-runway').innerText = calculateRunway() + " mo";
+          
+          let totalExpected = 0;
+          if (data.config.expectedIncome) { Object.values(data.config.expectedIncome).forEach(v => totalExpected += (v||0)); }
+          if (totalExpected > 0) {
+              const incPct = Math.min(100, (stats.income / totalExpected) * 100);
+              document.getElementById('disp-income-progress').innerHTML = `<div style="font-size:0.6rem; color:#888;">${incPct.toFixed(0)}% of ₱${totalExpected.toLocaleString()} Expected</div><div style="height:3px; background:#333; margin-top:3px; border-radius:2px;"><div style="width:${incPct}%; height:100%; background:var(--primary);"></div></div>`;
+          } else { document.getElementById('disp-income-progress').innerHTML = ""; }
+
+          const safeText = document.getElementById('disp-safe');
+          if (stats.safe < 0) safeText.style.color = "var(--danger)"; else if (stats.limit > 0 && stats.safe < (stats.limit * 0.2)) safeText.style.color = "var(--warning)"; else safeText.style.color = "var(--primary)";
+
+          document.getElementById('disp-total-liquid').innerText = `₱ ${(stats.liquid||0).toLocaleString()}`;
+          document.getElementById('disp-net-worth').innerText = `₱ ${(stats.net||0).toLocaleString()}`;
+          document.getElementById('disp-free-cash').innerText = `₱ ${(stats.free||0).toLocaleString()}`;
+          document.getElementById('disp-frozen-cash').innerText = `₱ ${(stats.frozen||0).toLocaleString()}`;
+      } catch (e) { console.error("UI Render Error", e); }
+
+      // TRY/CATCH BLAST SHIELDS FOR LISTS
+      try { renderQuickPresets(); } catch(e) { console.error("Quick Presets Error", e); }
+      try { renderCategoryBudgets(stats.txs); } catch(e) { console.error("Category Budgets Error", e); }
+      try { renderJarList(); } catch(e) { console.error("Jar List Error", e); }
+      try { renderDebtList(); } catch(e) { console.error("Debt List Error", e); }
+      try { renderTrophyList(); } catch(e) { console.error("Trophy Error", e); }
+      try { renderAssetList(stats.txs); } catch(e) { console.error("Asset List Error", e); }
+      try { renderTxList(stats.txs); } catch(e) { console.error("Tx List Error", e); }
       
-      let daysRemaining = 1;
-      if (isCurrentMonth) { const now = new Date(); const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0); daysRemaining = Math.max(1, endOfMonth.getDate() - now.getDate() + 1); } 
-      else { const endOfMonth = new Date(viewDateObj.getFullYear(), viewDateObj.getMonth() + 1, 0); daysRemaining = endOfMonth.getDate(); }
-      document.getElementById('disp-daily').innerText = `₱ ${Math.round(stats.safe > 0 ? (stats.safe / daysRemaining) : 0).toLocaleString()}`;
-      
-      document.getElementById('disp-income-val').innerText = `₱ ${stats.income.toLocaleString()}`;
-      document.getElementById('disp-total-exp').innerText = `₱ ${stats.expenses.toLocaleString()}`;
-      document.getElementById('disp-runway').innerText = calculateRunway() + " mo";
-      
-      let totalExpected = 0;
-      if (data.config.expectedIncome) {
-          Object.values(data.config.expectedIncome).forEach(v => totalExpected += v);
-      }
-      if (totalExpected > 0) {
-          const incPct = Math.min(100, (stats.income / totalExpected) * 100);
-          document.getElementById('disp-income-progress').innerHTML = `<div style="font-size:0.6rem; color:#888;">${incPct.toFixed(0)}% of ₱${totalExpected.toLocaleString()} Expected</div><div style="height:3px; background:#333; margin-top:3px; border-radius:2px;"><div style="width:${incPct}%; height:100%; background:var(--primary);"></div></div>`;
-      } else {
-          document.getElementById('disp-income-progress').innerHTML = "";
-      }
+      try {
+          const plMonthSel = document.getElementById('sel-insights-range');
+          if (plMonthSel) { 
+              plMonthSel.innerHTML = `<option value="1">This Month</option><option value="3">Last 3 Months</option><option value="12">This Year (12 Mo)</option><option value="all">All Time</option><optgroup label="Specific Months">` + 
+              (data.history || []).map(h => h && h.id ? `<option value="${h.id}">${h.id}</option>` : '').reverse().join('') + `</optgroup>`; 
+          }
+      } catch (e) { console.error("Insights Dropdown Error", e); }
 
-      const safeText = document.getElementById('disp-safe');
-      if (stats.safe < 0) safeText.style.color = "var(--danger)"; else if (stats.limit > 0 && stats.safe < (stats.limit * 0.2)) safeText.style.color = "var(--warning)"; else safeText.style.color = "var(--primary)";
-
-      document.getElementById('disp-total-liquid').innerText = `₱ ${stats.liquid.toLocaleString()}`;
-      document.getElementById('disp-net-worth').innerText = `₱ ${stats.net.toLocaleString()}`;
-      document.getElementById('disp-free-cash').innerText = `₱ ${stats.free.toLocaleString()}`;
-      document.getElementById('disp-frozen-cash').innerText = `₱ ${stats.frozen.toLocaleString()}`;
-
-      renderQuickPresets();
-      renderCategoryBudgets(stats.txs); 
-      renderJarList();
-      renderDebtList();
-      renderTrophyList();
-      renderAssetList(stats.txs);
-      renderTxList(stats.txs);
-      
-      const plMonthSel = document.getElementById('sel-insights-range');
-      if (plMonthSel) { plMonthSel.innerHTML = `<option value="1">This Month</option><option value="3">Last 3 Months</option><option value="12">This Year (12 Mo)</option><option value="all">All Time</option><optgroup label="Specific Months">` + data.history.map(h => `<option value="${h.id}">${h.id}</option>`).reverse().join('') + `</optgroup>`; }
-
-      renderTimeline(stats.txs); 
-      renderBillList();
-      updateRingChart(stats);
+      try { renderTimeline(stats.txs); } catch(e) { console.error("Timeline Error", e); }
+      try { renderBillList(); } catch(e) { console.error("Bill List Error", e); }
+      try { updateRingChart(stats); } catch(e) { console.error("Ring Chart Error", e); }
 
       const slider = document.getElementById('slider-safe'); if (slider) slider.value = String(clampInt(data.config.safePct, 0, 100));
       const lbl = document.getElementById('lbl-safe-pct'); if (lbl) lbl.innerText = `${clampInt(data.config.safePct, 0, 100)}%`;
     }
 
     function renderCategoryBudgets(txs) {
-        const container = document.getElementById('home-category-budgets');
-        container.innerHTML = "";
-        
+        const container = document.getElementById('home-category-budgets'); container.innerHTML = "";
         if (!data.config.categoryBudgets) return;
         const activeBudgets = Object.keys(data.config.categoryBudgets).filter(k => data.config.categoryBudgets[k] > 0);
         if (activeBudgets.length === 0) return;
         
         container.innerHTML = `<div class="section-title" style="margin-top:0;">CATEGORY BUDGETS</div>`;
-        
         activeBudgets.forEach(catId => {
-            const limit = data.config.categoryBudgets[catId];
-            const catDef = CATEGORIES.exp.find(c => c.id === catId);
-            if (!catDef) return;
-            
-            const spent = txs.filter(t => t.type === 'exp' && t.catId === catId).reduce((s,t) => s + (t.amount||0), 0);
-            const pct = Math.min(100, (spent / limit) * 100);
-            const isOver = spent > limit;
-            const barColor = isOver ? 'var(--danger)' : 'var(--primary)';
-            
-            container.innerHTML += `
-                <div style="margin-bottom:12px;">
-                    <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#888; font-weight:bold; margin-bottom:4px; text-transform:uppercase;">
-                        <span>${catDef.icon} ${catDef.name}</span>
-                        <span style="color:${isOver ? 'var(--danger)' : '#fff'};">₱${spent.toLocaleString()} / ₱${limit.toLocaleString()}</span>
-                    </div>
-                    <div style="height:6px; background:#222; border-radius:3px; overflow:hidden;">
-                        <div style="width:${pct}%; height:100%; background:${barColor}; transition:width 0.3s;"></div>
-                    </div>
-                </div>
-            `;
+            const limit = data.config.categoryBudgets[catId]; const catDef = CATEGORIES.exp.find(c => c.id === catId); if (!catDef) return;
+            const spent = txs.filter(t => t.type === 'exp' && t.catId === catId).reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
+            const pct = Math.min(100, (spent / limit) * 100); const isOver = spent > limit; const barColor = isOver ? 'var(--danger)' : 'var(--primary)';
+            container.innerHTML += `<div style="margin-bottom:12px;"><div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#888; font-weight:bold; margin-bottom:4px; text-transform:uppercase;"><span>${catDef.icon} ${catDef.name}</span><span style="color:${isOver ? 'var(--danger)' : '#fff'};">₱${(spent||0).toLocaleString()} / ₱${(limit||0).toLocaleString()}</span></div><div style="height:6px; background:#222; border-radius:3px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:${barColor}; transition:width 0.3s;"></div></div></div>`;
         });
     }
 
     function renderQuickPresets() {
-        const row = document.getElementById('quick-presets');
-        const container = document.getElementById('quick-log-container');
-        if(viewMonth !== data.currentMonth || !data.config.customPresets || data.config.customPresets.length === 0) { 
-            container.style.display = 'none'; return; 
-        }
-        container.style.display = 'block';
-        row.innerHTML = "";
-        data.config.customPresets.forEach(p => {
-            row.innerHTML += `<div class="chip" onclick="logQuickTx('${p.name}', ${p.amt}, '${p.icon}')">${p.icon} ${p.name} ₱${p.amt}</div>`;
-        });
+        const row = document.getElementById('quick-presets'); const container = document.getElementById('quick-log-container');
+        if(viewMonth !== data.currentMonth || !data.config.customPresets || data.config.customPresets.length === 0) { container.style.display = 'none'; return; }
+        container.style.display = 'block'; row.innerHTML = "";
+        data.config.customPresets.forEach(p => { row.innerHTML += `<div class="chip" onclick="logQuickTx('${p.name}', ${p.amt}, '${p.icon}')">${p.icon} ${p.name} ₱${p.amt}</div>`; });
     }
 
     function renderJarList() {
-      const pGrid = document.getElementById('priority-grid'); pGrid.innerHTML = "";
-      const wGrid = document.getElementById('jar-grid'); wGrid.innerHTML = "";
+      const pGrid = document.getElementById('priority-grid'); pGrid.innerHTML = ""; const wGrid = document.getElementById('jar-grid'); wGrid.innerHTML = "";
       const isCurrentMonth = viewMonth === data.currentMonth;
 
-      data.jars.forEach((jar, i) => {
-        const isPriority = jar.type === 'priority';
-        const isReady = !isPriority && jar.target > 0 && (jar.saved >= jar.target);
+      (data.jars || []).forEach((jar, i) => {
+        if(!jar) return;
+        const isPriority = jar.type === 'priority'; const isReady = !isPriority && jar.target > 0 && (jar.saved >= jar.target);
         const pct = isPriority || jar.target <= 0 ? 100 : Math.min(100, (jar.saved / jar.target) * 100);
 
         let actionHtml = '';
@@ -923,30 +921,17 @@
         else actionHtml = `<div style="height:4px; background:#333; margin-top:10px; border-radius:2px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:var(--purple);"></div></div>`;
 
         let ruleHtml = '';
-        if (jar.ruleType === 'pct') ruleHtml = `⚡ Auto: ${jar.ruleAmt}% of bank deposits`;
-        else if (jar.ruleType === 'fixed') ruleHtml = `⚡ Auto: ₱${jar.ruleAmt.toLocaleString()} of bank deposits`;
+        if (jar.ruleType === 'pct') ruleHtml = `⚡ Auto: ${jar.ruleAmt}% of bank deposits`; else if (jar.ruleType === 'fixed') ruleHtml = `⚡ Auto: ₱${(jar.ruleAmt||0).toLocaleString()} of bank deposits`;
         if (ruleHtml) ruleHtml = `<div style="font-size:0.6rem; color:var(--success); margin-top:2px;">${ruleHtml}</div>`;
 
         let paceHtml = '';
         if (!isPriority && jar.goalDate && !isReady && jar.target > 0) {
-          const msLeft = new Date(jar.goalDate) - new Date();
-          const monthsLeft = Math.max(1, Math.ceil(msLeft / (1000 * 60 * 60 * 24 * 30)));
-          if (msLeft < 0) paceHtml = `<div style="font-size:0.6rem; color:var(--danger); margin-top:4px;">⚠️ Overdue</div>`;
-          else paceHtml = `<div style="font-size:0.6rem; color:var(--warning); margin-top:4px;">⚠️ Pace: Need ₱${Math.ceil((jar.target - jar.saved) / monthsLeft).toLocaleString()}/mo</div>`;
+          const msLeft = new Date(jar.goalDate) - new Date(); const monthsLeft = Math.max(1, Math.ceil(msLeft / (1000 * 60 * 60 * 24 * 30)));
+          if (msLeft < 0) paceHtml = `<div style="font-size:0.6rem; color:var(--danger); margin-top:4px;">⚠️ Overdue</div>`; else paceHtml = `<div style="font-size:0.6rem; color:var(--warning); margin-top:4px;">⚠️ Pace: Need ₱${Math.ceil((jar.target - jar.saved) / monthsLeft).toLocaleString()}/mo</div>`;
         }
 
-        const borderColor = isPriority ? 'var(--success)' : (isReady ? 'var(--gold)' : '#333');
-        const icon = isPriority ? '🛡️' : (isReady ? '🎁' : '🧞');
-        const targetText = isPriority || jar.target <= 0 ? '' : ` / ₱${jar.target.toLocaleString()}`;
-
-        const cardHtml = `
-          <div class="card" style="padding:15px; margin:0; cursor:${isCurrentMonth ? 'pointer' : 'default'}; border:1px solid ${borderColor}; position:relative;" ${isCurrentMonth ? `onclick="openManageJar(${i})"` : ''}>
-            <div style="font-size:1.5rem; margin-bottom:5px;">${icon}</div>
-            <div class="bold" style="font-size:1rem;">${jar.name}</div>
-            <div class="label" style="margin-top:5px; color:#fff;">₱${jar.saved.toLocaleString()}${targetText}</div>
-            ${ruleHtml} ${paceHtml} ${actionHtml}
-          </div>`;
-
+        const borderColor = isPriority ? 'var(--success)' : (isReady ? 'var(--gold)' : '#333'); const icon = isPriority ? '🛡️' : (isReady ? '🎁' : '🧞'); const targetText = isPriority || !jar.target || jar.target <= 0 ? '' : ` / ₱${(jar.target||0).toLocaleString()}`;
+        const cardHtml = `<div class="card" style="padding:15px; margin:0; cursor:${isCurrentMonth ? 'pointer' : 'default'}; border:1px solid ${borderColor}; position:relative;" ${isCurrentMonth ? `onclick="openManageJar(${i})"` : ''}><div style="font-size:1.5rem; margin-bottom:5px;">${icon}</div><div class="bold" style="font-size:1rem;">${jar.name}</div><div class="label" style="margin-top:5px; color:#fff;">₱${(jar.saved||0).toLocaleString()}${targetText}</div>${ruleHtml} ${paceHtml} ${actionHtml}</div>`;
         if (isPriority) pGrid.innerHTML += cardHtml; else wGrid.innerHTML += cardHtml;
       });
     }
@@ -954,127 +939,75 @@
     function renderDebtList() {
       const grid = document.getElementById('debt-grid');
       if(!data.debts || data.debts.length === 0) { grid.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No active liabilities.</div>`; return; }
-      grid.innerHTML = data.debts.map((d, i) => `
-        <div class="tx-item" style="border-left:4px solid var(--danger); background:#1a1111; cursor:pointer;" onclick="payDebt(${i})">
-          <div style="flex:1"><div class="bold">${d.name}</div><div class="label">TAP TO PAY</div></div>
-          <div class="mono bold text-red">₱${d.balance.toLocaleString()}</div>
-        </div>
-      `).join('');
+      grid.innerHTML = data.debts.map((d, i) => `<div class="tx-item" style="border-left:4px solid var(--danger); background:#1a1111; cursor:pointer;" onclick="payDebt(${i})"><div style="flex:1"><div class="bold">${d.name}</div><div class="label">TAP TO PAY</div></div><div class="mono bold text-red">₱${(d.balance||0).toLocaleString()}</div></div>`).join('');
     }
 
     function renderTrophyList() {
       const list = document.getElementById('trophy-list'); list.innerHTML = "";
       if (!data.trophyRoom || data.trophyRoom.length === 0) { list.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No completed wishes yet.</div>`; return; }
       data.trophyRoom.forEach(t => {
-        let vHtml = '';
-        if (t.goalDate && t.dateBought) {
-           const daysDiff = Math.floor((new Date(t.goalDate) - new Date(t.dateBought)) / (1000 * 60 * 60 * 24));
-           vHtml = daysDiff >= 0 ? `<div style="font-size:0.65rem; color:var(--success);">Beat goal by ${daysDiff} days!</div>` : `<div style="font-size:0.65rem; color:#888;">Missed goal by ${Math.abs(daysDiff)} days</div>`;
-        }
+        if(!t) return; let vHtml = '';
+        if (t.goalDate && t.dateBought) { const daysDiff = Math.floor((new Date(t.goalDate) - new Date(t.dateBought)) / (1000 * 60 * 60 * 24)); vHtml = daysDiff >= 0 ? `<div style="font-size:0.65rem; color:var(--success);">Beat goal by ${daysDiff} days!</div>` : `<div style="font-size:0.65rem; color:#888;">Missed goal by ${Math.abs(daysDiff)} days</div>`; }
         list.innerHTML += `<div class="trophy-item"><div style="font-size:1.5rem; margin-right:15px;">🏆</div><div style="flex:1;"><div class="bold">${t.name}</div><div class="label" style="margin-bottom:2px;">BOUGHT: ${new Date(t.dateBought).toLocaleDateString()}</div>${vHtml}</div><div class="mono bold text-gold">-₱${(t.target ?? t.saved ?? 0).toLocaleString()}</div></div>`;
       });
     }
 
     function renderAssetList(txs) {
-      const list = document.getElementById('asset-list'); list.innerHTML = "";
-      const assets = txs.filter(t => t.type === 'asset');
+      const list = document.getElementById('asset-list'); list.innerHTML = ""; const assets = txs.filter(t => t && t.type === 'asset');
       if (assets.length === 0) { list.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No assets logged this month.</div>`; return; }
-      assets.forEach(tx => {
-          const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
-          list.innerHTML += `<div class="tx-item" style="border: 1px solid rgba(255, 214, 10, 0.3);"><div class="icon-box icon-asset">${tx.catIcon || '📦'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${new Date(tx.date).toLocaleDateString()}</div></div><div class="mono bold text-gold blur-sensitive">-₱${tx.amount.toLocaleString()}</div>${del}</div>`;
-      });
+      assets.forEach(tx => { const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : ''; list.innerHTML += `<div class="tx-item" style="border: 1px solid rgba(255, 214, 10, 0.3);"><div class="icon-box icon-asset">${tx.catIcon || '📦'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${new Date(tx.date).toLocaleDateString()}</div></div><div class="mono bold text-gold blur-sensitive">-₱${(parseFloat(tx.amount)||0).toLocaleString()}</div>${del}</div>`; });
     }
 
     function renderTxList(txs) {
-      const list = document.getElementById('tx-list'); list.innerHTML = "";
-      const budgetTxs = txs.filter(t => t.type !== 'asset');
+      const list = document.getElementById('tx-list'); list.innerHTML = ""; const budgetTxs = txs.filter(t => t && t.type !== 'asset');
       if (!budgetTxs || budgetTxs.length === 0) { list.innerHTML = `<div style="text-align:center; color:#333; margin-top:30px; font-size:0.9rem;">No data for ${viewMonth}</div>`; return; }
-      const groups = {}; budgetTxs.forEach(tx => { const dk = new Date(tx.date).toLocaleDateString(); if (!groups[dk]) groups[dk] = []; groups[dk].push(tx); });
+      const groups = {}; budgetTxs.forEach(tx => { if(!tx.date) return; const dk = new Date(tx.date).toLocaleDateString(); if (!groups[dk]) groups[dk] = []; groups[dk].push(tx); });
       Object.keys(groups).forEach(date => {
         list.innerHTML += `<div class="label" style="margin-top:20px; margin-left:5px;">${date}</div>`;
         groups[date].forEach(tx => {
-          const c = tx.type === 'exp' ? 'icon-exp' : 'icon-inc'; const ac = tx.type === 'exp' ? 'text-red' : 'text-teal'; const s = tx.type === 'exp' ? '-' : '+';
-          const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
-          list.innerHTML += `<div class="tx-item"><div class="icon-box ${c}">${tx.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${(tx.catId || 'GENERAL').toUpperCase()}</div></div><div class="mono bold ${ac} blur-sensitive">${s}₱${tx.amount.toLocaleString()}</div>${del}</div>`;
+          const c = tx.type === 'exp' ? 'icon-exp' : 'icon-inc'; const ac = tx.type === 'exp' ? 'text-red' : 'text-teal'; const s = tx.type === 'exp' ? '-' : '+'; const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
+          list.innerHTML += `<div class="tx-item"><div class="icon-box ${c}">${tx.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${tx.title}</div><div class="label">${(tx.catId || 'GENERAL').toUpperCase()}</div></div><div class="mono bold ${ac} blur-sensitive">${s}₱${(parseFloat(tx.amount)||0).toLocaleString()}</div>${del}</div>`;
         });
       });
     }
 
     function renderInsightsData() {
       const range = document.getElementById('sel-insights-range').value;
-      let targetTxs = [];
-      let labels = []; let incData = []; let expData = [];
-      let histToUse = [];
-
+      let targetTxs = []; let labels = []; let incData = []; let expData = []; let histToUse = [];
       const currObj = {id: data.currentMonth, stats: {income: calculateStats().income, expenses: calculateStats().expenses}, txs: data.transactions};
 
       if (range === '1') { histToUse = [currObj]; } 
       else if (range === '3') { histToUse = data.history.slice(-2).concat([currObj]); } 
       else if (range === '12') { histToUse = data.history.slice(-11).concat([currObj]); } 
       else if (range === 'all') { histToUse = data.history.concat([currObj]); } 
-      else {
-          if (range === data.currentMonth) { histToUse = [currObj]; } 
-          else { const h = data.history.find(x => x.id === range); if (h) histToUse = [h]; }
-      }
+      else { if (range === data.currentMonth) { histToUse = [currObj]; } else { const h = data.history.find(x => x && x.id === range); if (h) histToUse = [h]; } }
 
-      labels = histToUse.map(h => h.id.split(' ')[0]);
-      incData = histToUse.map(h => h.stats?.income || 0);
-      expData = histToUse.map(h => h.stats?.expenses || 0);
-      histToUse.forEach(h => { if (h.txs) targetTxs = targetTxs.concat(h.txs); });
+      labels = histToUse.map(h => h && h.id ? h.id.split(' ')[0] : '?');
+      incData = histToUse.map(h => h && h.stats ? (h.stats.income || 0) : 0);
+      expData = histToUse.map(h => h && h.stats ? (h.stats.expenses || 0) : 0);
+      histToUse.forEach(h => { if (h && h.txs) targetTxs = targetTxs.concat(h.txs); });
 
       const ctx = document.getElementById('chart-insights').getContext('2d');
       if(chartInsights) chartInsights.destroy();
-      chartInsights = new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets: [{label:'Income', data:incData, backgroundColor:'#00E5FF', borderRadius:4}, {label:'Expenses', data:expData, backgroundColor:'#FF3B30', borderRadius:4}]},
-        options: { plugins: {legend: {display:false}}, scales: {y: {display:false, grid:{display:false}}, x: {grid: {display:false, color:'#222'}}}}
-      });
+      chartInsights = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{label:'Income', data:incData, backgroundColor:'#00E5FF', borderRadius:4}, {label:'Expenses', data:expData, backgroundColor:'#FF3B30', borderRadius:4}]}, options: { plugins: {legend: {display:false}}, scales: {y: {display:false, grid:{display:false}}, x: {grid: {display:false, color:'#222'}}}} });
 
       const streams = {};
-      targetTxs.forEach(t => { 
-          if(t.type==='inc' && t.catId !== 'Transfer' && t.catId !== 'transfer') {
-              streams[t.catId] = (streams[t.catId] || 0) + (t.amount || 0); 
-          }
-      });
+      targetTxs.forEach(t => { if(t && t.type==='inc' && t.catId !== 'Transfer' && t.catId !== 'transfer') { streams[t.catId] = (streams[t.catId] || 0) + (parseFloat(t.amount) || 0); } });
       
       const plList = document.getElementById('pl-list');
       if (Object.keys(streams).length === 0) { plList.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No revenue streams tracked in this period.</div>`; }
-      else {
-          plList.innerHTML = Object.entries(streams).map(([name, val]) => `
-            <div class="tx-item" style="background:#0a1a1a; border-left:3px solid var(--primary);">
-              <div style="flex:1"><div class="bold">${name}</div></div>
-              <div class="mono bold text-teal">₱${val.toLocaleString()}</div>
-            </div>
-          `).join('');
-      }
+      else { plList.innerHTML = Object.entries(streams).map(([name, val]) => `<div class="tx-item" style="background:#0a1a1a; border-left:3px solid var(--primary);"><div style="flex:1"><div class="bold">${name}</div></div><div class="mono bold text-teal">₱${(val||0).toLocaleString()}</div></div>`).join(''); }
     }
 
     function renderTimeline(txs) {
       const container = document.getElementById('timeline-scroll'); container.innerHTML = ""; const today = new Date().getDate();
-      
       const dailySpend = {};
-      if (txs) {
-          txs.forEach(t => {
-              if(t.type === 'exp' && t.catId !== 'bill' && t.catId !== 'transfer') {
-                  const d = new Date(t.date).getDate();
-                  dailySpend[d] = (dailySpend[d] || 0) + (t.amount || 0);
-              }
-          });
-      }
+      if (txs) { txs.forEach(t => { if(t && t.type === 'exp' && t.catId !== 'bill' && t.catId !== 'transfer' && t.date) { const d = new Date(t.date).getDate(); if(!isNaN(d)) dailySpend[d] = (dailySpend[d] || 0) + (parseFloat(t.amount) || 0); } }); }
 
       for (let i = 1; i <= 31; i++) {
-        const hasBill = data.bills.some(b => b.day === i); 
-        let bc = i === today ? "var(--primary)" : "#333"; 
-        let tc = i === today ? "var(--primary)" : "#666";
-        let bg = 'transparent';
-
-        if (dailySpend[i] > 0) {
-            if (dailySpend[i] > 1000) { bg = 'rgba(255, 59, 48, 0.3)'; bc = 'var(--danger)'; tc = '#fff'; } 
-            else { bg = 'rgba(255, 159, 10, 0.3)'; bc = 'var(--warning)'; tc = '#fff'; } 
-        }
-
+        const hasBill = (data.bills || []).some(b => b && b.day === i); let bc = i === today ? "var(--primary)" : "#333"; let tc = i === today ? "var(--primary)" : "#666"; let bg = 'transparent';
+        if (dailySpend[i] > 0) { if (dailySpend[i] > 1000) { bg = 'rgba(255, 59, 48, 0.3)'; bc = 'var(--danger)'; tc = '#fff'; } else { bg = 'rgba(255, 159, 10, 0.3)'; bc = 'var(--warning)'; tc = '#fff'; } }
         if (hasBill && !dailySpend[i]) { tc = "#fff"; bc = i < today ? "var(--danger)" : (i === today ? "var(--primary)" : "#555"); bg = 'rgba(255,255,255,0.05)'; }
-        
         container.innerHTML += `<div style="min-width: 40px; height: 50px; border: 1px solid ${bc}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: ${bg}; color: ${tc};"><span style="font-size:0.8rem; font-weight:bold;">${i}</span>${hasBill ? '<div style="width:4px; height:4px; background:currentColor; border-radius:50%; margin-top:2px;"></div>' : ''}</div>`;
       }
     }
@@ -1082,31 +1015,11 @@
     function renderBillList() {
       const list = document.getElementById('bill-list'); list.innerHTML = ""; const today = new Date().getDate();
       if (!data.bills) return;
-      data.bills.slice().sort((a, b) => a.day - b.day).forEach((b, i) => {
-        const isPaid = b.lastPaidMonth === data.currentMonth;
-        const diff = b.day - today; 
-        const status = isPaid ? "Paid" : (today > b.day ? "Past Due" : (diff <= 3 ? `Due in ${diff} days` : `Due Day ${b.day}`)); 
-        const color = isPaid ? "var(--success)" : (today > b.day ? "#666" : (diff <= 3 ? "var(--warning)" : "var(--primary)"));
-        
-        list.innerHTML += `
-          <div class="card" style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-left:3px solid ${color};">
-            <div style="display:flex; align-items:center;">
-                <div class="bill-checkbox ${isPaid ? 'paid' : ''}" onclick="markBillPaid(${data.bills.indexOf(b)})"></div>
-                <div><div class="bold" style="${isPaid ? 'text-decoration:line-through; color:#666;' : ''}">${b.name}</div><div class="label" style="color:${color}">${status}</div></div>
-            </div>
-            <div style="display:flex; align-items:center;"><span class="mono bold" style="${isPaid ? 'color:#666;' : ''}">₱${b.amount.toLocaleString()}</span><span style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteBill(${data.bills.indexOf(b)})">✕</span></div>
-          </div>`;
+      data.bills.slice().sort((a, b) => (a.day||0) - (b.day||0)).forEach((b, i) => {
+        if(!b) return;
+        const isPaid = b.lastPaidMonth === data.currentMonth; const diff = (b.day||0) - today; const status = isPaid ? "Paid" : (today > b.day ? "Past Due" : (diff <= 3 ? `Due in ${diff} days` : `Due Day ${b.day}`)); const color = isPaid ? "var(--success)" : (today > b.day ? "#666" : (diff <= 3 ? "var(--warning)" : "var(--primary)"));
+        list.innerHTML += `<div class="card" style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-left:3px solid ${color};"><div style="display:flex; align-items:center;"><div class="bill-checkbox ${isPaid ? 'paid' : ''}" onclick="markBillPaid(${data.bills.indexOf(b)})"></div><div><div class="bold" style="${isPaid ? 'text-decoration:line-through; color:#666;' : ''}">${b.name}</div><div class="label" style="color:${color}">${status}</div></div></div><div style="display:flex; align-items:center;"><span class="mono bold" style="${isPaid ? 'color:#666;' : ''}">₱${(b.amount||0).toLocaleString()}</span><span style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteBill(${data.bills.indexOf(b)})">✕</span></div></div>`;
       });
-    }
-
-    function updateRingChart(stats) {
-      const canvas = document.getElementById('chart-ring'); if (!canvas) return; const ctx = canvas.getContext('2d');
-      const limit = Math.max(1, stats.limit || 0); const used = Math.min(Math.max(0, stats.expenses || 0), limit); const remain = Math.max(0, limit - used);
-      const usedC = getComputedStyle(document.documentElement).getPropertyValue('--danger').trim() || '#FF3B30'; const remainC = getComputedStyle(document.documentElement).getPropertyValue('--success').trim() || '#30D158';
-      const pct = (stats.limit > 0) ? Math.min(999, Math.round((Math.max(0, stats.expenses || 0) / stats.limit) * 100)) : 0;
-      const lbl = document.getElementById('lbl-ring-pct'); if (lbl) lbl.innerText = `${pct}%`;
-      if (chartInstance) chartInstance.destroy();
-      chartInstance = new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [used, remain], backgroundColor: [usedC, remainC], borderWidth: 0, borderRadius: 20 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 450 } } });
     }
 
     function switchTab(viewId, navEl) { 
@@ -1126,63 +1039,35 @@
         const pct = clampInt(data.config.safePct, 0, 100); const s = document.getElementById('slider-safe'); const l = document.getElementById('lbl-safe-pct');
         if (s) s.value = String(pct); if (l) l.innerText = `${pct}%`; 
         
-        document.getElementById('settings-presets-list').innerHTML = data.config.customPresets.map((p,i) => `
-            <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-                <span>${p.icon} ${p.name} (₱${p.amt})</span> <span onclick="delPreset(${i})" style="color:var(--danger); cursor:pointer;">✕</span>
-            </div>
-        `).join('');
-
-        const catHtml = CATEGORIES.exp.map(c => `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span style="font-size:0.9rem;">${c.icon} ${c.name}</span>
-                <input type="number" id="inp-budget-${c.id}" value="${data.config.categoryBudgets[c.id] || ''}" placeholder="Limit" style="width:90px; padding:8px; margin:0; text-align:right;" onchange="saveCatBudget('${c.id}', this.value)">
-            </div>
-        `).join('');
+        document.getElementById('settings-presets-list').innerHTML = data.config.customPresets.map((p,i) => `<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;"><span>${p.icon} ${p.name} (₱${p.amt})</span> <span onclick="delPreset(${i})" style="color:var(--danger); cursor:pointer;">✕</span></div>`).join('');
+        const catHtml = CATEGORIES.exp.map(c => `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;"><span style="font-size:0.9rem;">${c.icon} ${c.name}</span><input type="number" id="inp-budget-${c.id}" value="${data.config.categoryBudgets[c.id] || ''}" placeholder="Limit" style="width:90px; padding:8px; margin:0; text-align:right;" onchange="saveCatBudget('${c.id}', this.value)"></div>`).join('');
         document.getElementById('settings-cat-budgets').innerHTML = catHtml;
-        
         openModal('modal-settings'); 
     }
 
-    function saveCatBudget(id, val) {
-        data.config.categoryBudgets[id] = parseFloat(val) || 0;
-        saveData();
-    }
+    function saveCatBudget(id, val) { data.config.categoryBudgets[id] = parseFloat(val) || 0; saveData(); }
     
     function openIncomeModal() { 
       if (viewMonth !== data.currentMonth) return alert("Edit funding in current month only."); 
       document.getElementById('inp-income-setting').value = data.config.baseIncome || ""; 
       document.getElementById('inp-rollover-override').value = data.config.rollover || ""; 
-      
-      document.getElementById('custom-stream-list').innerHTML = data.config.customStreams.map((s,i) => `
-        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">${s} <span onclick="removeStream(${i})" style="color:var(--danger); cursor:pointer;">✕</span></div>
-      `).join('');
-
-      const expHtml = data.config.customStreams.map(s => `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-size:0.9rem; font-weight:bold;">${s}</span>
-            <input type="number" id="inp-expinc-${s}" value="${data.config.expectedIncome[s] || ''}" placeholder="Expected ₱" style="width:120px; padding:8px; margin:0; text-align:right;" onchange="saveExpectedInc('${s}', this.value)">
-        </div>
-      `).join('');
+      document.getElementById('custom-stream-list').innerHTML = data.config.customStreams.map((s,i) => `<div style="display:flex; justify-content:space-between; margin-bottom:5px;">${s} <span onclick="removeStream(${i})" style="color:var(--danger); cursor:pointer;">✕</span></div>`).join('');
+      const expHtml = data.config.customStreams.map(s => `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;"><span style="font-size:0.9rem; font-weight:bold;">${s}</span><input type="number" id="inp-expinc-${s}" value="${data.config.expectedIncome[s] || ''}" placeholder="Expected ₱" style="width:120px; padding:8px; margin:0; text-align:right;" onchange="saveExpectedInc('${s}', this.value)"></div>`).join('');
       document.getElementById('expected-income-list').innerHTML = expHtml;
-      
       openModal('modal-income'); 
     }
 
-    function saveExpectedInc(s, val) {
-        data.config.expectedIncome[s] = parseFloat(val) || 0;
-        saveData();
-    }
-    
+    function saveExpectedInc(s, val) { data.config.expectedIncome[s] = parseFloat(val) || 0; saveData(); }
     function removeStream(i) { data.config.customStreams.splice(i,1); openIncomeModal(); saveData(); }
-    function openNewBill() { openModal('modal-bill'); }
+    function openNewBill() { document.getElementById('inp-bill-name').value = ""; document.getElementById('inp-bill-amt').value = ""; document.getElementById('inp-bill-day').value = ""; openModal('modal-bill'); }
     function openAdjustSavings() { openModal('modal-adjust'); }
 
-    function runSearchModal(q) {
-      const res = document.getElementById('search-results-modal'); res.innerHTML = ""; if (!q || q.length < 2) return;
+    function runSearchInline(q) {
+      const res = document.getElementById('search-results-inline'); res.innerHTML = ""; if (!q || q.length < 2) return;
       let matches = []; data.transactions.forEach(t => matches.push({ ...t, src: 'Current' })); data.history.forEach(h => (h.txs || []).forEach(t => matches.push({ ...t, src: h.id })));
-      const needle = q.toLowerCase(); matches = matches.filter(m => (m.title || '').toLowerCase().includes(needle));
-      if (matches.length === 0) { res.innerHTML = "<div style='text-align:center;margin-top:20px;color:#666'>No matches</div>"; return; }
-      matches.forEach(m => { const c = m.type === 'exp' ? 'text-red' : 'text-teal'; const s = m.type === 'exp' ? '-' : '+'; res.innerHTML += `<div class="tx-item"><div class="bold" style="font-size:1.2rem; margin-right:10px;">${m.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${m.title}</div><div class="label">${m.src}</div></div><div class="mono bold ${c}">${s}₱${m.amount.toLocaleString()}</div></div>`; });
+      const needle = q.toLowerCase(); matches = matches.filter(m => m && (m.title || '').toLowerCase().includes(needle));
+      if (matches.length === 0) { res.innerHTML = "<div style='text-align:center;color:#666'>No matches</div>"; return; }
+      matches.forEach(m => { const c = m.type === 'exp' ? 'text-red' : 'text-teal'; const s = m.type === 'exp' ? '-' : '+'; res.innerHTML += `<div class="tx-item"><div class="bold" style="font-size:1.2rem; margin-right:10px;">${m.catIcon || '•'}</div><div style="flex:1;"><div class="bold">${m.title}</div><div class="label">${m.src}</div></div><div class="mono bold ${c}">${s}₱${(parseFloat(m.amount)||0).toLocaleString()}</div></div>`; });
     }
   </script>
 </body>
