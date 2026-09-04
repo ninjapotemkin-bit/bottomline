@@ -162,6 +162,10 @@
             <button class="btn btn-glass" style="margin-top:20px; font-size:0.8rem;" onclick="openAdjustSavings()">Update Bank Balance</button>
           </div>
         </div>
+
+        <div class="section-title" style="margin-top:0; color:var(--gold);">ACCOUNTS</div>
+        <div id="accounts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;"></div>
+        <button class="btn btn-glass" style="margin-bottom:30px; border-style:dashed; color:var(--gold); border-color:var(--gold);" onclick="openNewAccount()">+ Add Account</button>
         
         <div class="section-title" style="color:var(--success);">TIER 1: PRIORITY FUNDS</div>
         <button class="btn btn-glass" style="margin-bottom:15px; border-style:dashed; color:var(--success); border-color:var(--success);" id="btn-new-priority" onclick="openNewJar('priority')">+ New Priority Fund</button>
@@ -412,6 +416,42 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="modal-account" onclick="closeModal(event, 'modal-account')">
+    <div class="modal-sheet">
+      <h2 id="modal-account-header">Add Account</h2>
+      <input type="hidden" id="inp-acct-index" value="">
+
+      <div class="label" style="margin-top:10px;">BANK / E-WALLET</div>
+      <select id="inp-acct-provider" onchange="handleAcctProviderChange()"></select>
+
+      <div class="label" style="margin-top:10px;">ACCOUNT NICKNAME</div>
+      <input type="text" id="inp-acct-name" placeholder="e.g. BDO Savings">
+
+      <div id="div-acct-new-balance">
+        <div class="label" style="margin-top:10px;">STARTING BALANCE (₱)</div>
+        <input type="number" id="inp-acct-balance" placeholder="0">
+      </div>
+
+      <div id="div-acct-adjust" class="hidden">
+        <div class="label" style="margin-top:10px;">ADJUST BALANCE (₱)</div>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+          <button class="btn btn-glass" style="padding:10px; border-color:transparent;" id="btn-acct-adj-add" onclick="setAcctAdjMode('add')">+ Add</button>
+          <button class="btn btn-glass" style="padding:10px; border-color:transparent;" id="btn-acct-adj-sub" onclick="setAcctAdjMode('sub')">- Minus</button>
+          <button class="btn btn-glass" style="padding:10px; border-color:var(--gold);" id="btn-acct-adj-set" onclick="setAcctAdjMode('set')">Set Total</button>
+        </div>
+        <input type="number" id="inp-acct-adjust-amt" placeholder="Amount">
+      </div>
+
+      <div class="toggle-container" id="acct-primary-toggle" onclick="toggleAcctPrimary()">
+        <div><div style="font-weight:600; font-size:0.9rem;">Primary Account</div><div style="font-size:0.7rem; color:#888;">(Receives auto-transfers, payments & deposits)</div></div>
+        <div class="toggle-switch"></div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-save-account" style="background:var(--gold); color:#000; margin-bottom:10px;" onclick="saveAccount()">Save Account</button>
+      <button class="btn btn-glass hidden" id="btn-delete-account" style="color:var(--danger); border-color:var(--danger);" onclick="deleteAccount()">Delete Account</button>
+    </div>
+  </div>
+
   <script>
     const VERSION = 'bl_asset_v11'; 
 
@@ -423,6 +463,33 @@
         { id: 'tech', icon: '💻', name: 'Tech' }, { id: 'misc', icon: '💸', name: 'Misc' }
       ],
       inc: [{ id: 'income', icon: '💰', name: 'Income' }]
+    };
+
+    // 🏦 PH BANK / E-WALLET BADGE REGISTRY (styled initials, brand colors — no external logo assets)
+    const BANK_PROVIDERS = {
+      cash:          { name: 'Cash',           label: '₱',    bg: '#2E7D32', fg: '#FFFFFF' },
+      bdo:           { name: 'BDO',             label: 'BDO',  bg: '#003DA5', fg: '#FFCC00' },
+      bpi:           { name: 'BPI',             label: 'BPI',  bg: '#C8102E', fg: '#FFFFFF' },
+      metrobank:     { name: 'Metrobank',       label: 'MB',   bg: '#0033A0', fg: '#FFFFFF' },
+      unionbank:     { name: 'UnionBank',       label: 'UB',   bg: '#F7941E', fg: '#000000' },
+      landbank:      { name: 'Landbank',        label: 'LB',   bg: '#00A651', fg: '#FFFFFF' },
+      pnb:           { name: 'PNB',             label: 'PNB',  bg: '#7A1F2B', fg: '#FFD700' },
+      securitybank:  { name: 'Security Bank',   label: 'SB',   bg: '#004B87', fg: '#FFFFFF' },
+      rcbc:          { name: 'RCBC',            label: 'RCBC', bg: '#00529B', fg: '#FFD200' },
+      eastwest:      { name: 'EastWest',        label: 'EW',   bg: '#DA291C', fg: '#FFFFFF' },
+      chinabank:     { name: 'China Bank',      label: 'CBC',  bg: '#0055A4', fg: '#FFFFFF' },
+      psbank:        { name: 'PSBank',          label: 'PS',   bg: '#F5821F', fg: '#FFFFFF' },
+      dbp:           { name: 'DBP',             label: 'DBP',  bg: '#005BAA', fg: '#FFFFFF' },
+      pbcom:         { name: 'PBCOM',           label: 'PB',   bg: '#8A1538', fg: '#FFFFFF' },
+      robinsonsbank: { name: 'Robinsons Bank',  label: 'RB',   bg: '#E4032E', fg: '#FFFFFF' },
+      gcash:         { name: 'GCash',           label: 'G',    bg: '#0072CE', fg: '#FFFFFF' },
+      maya:          { name: 'Maya',            label: 'M',    bg: '#00D68F', fg: '#062E24' },
+      gotyme:        { name: 'GoTyme',          label: 'GO',   bg: '#00E0D8', fg: '#00363A' },
+      cimb:          { name: 'CIMB',            label: 'CIMB', bg: '#7B2D8E', fg: '#FFFFFF' },
+      ing:           { name: 'ING',             label: 'ING',  bg: '#FF6200', fg: '#FFFFFF' },
+      seabank:       { name: 'SeaBank',         label: 'SEA',  bg: '#EE4D2D', fg: '#FFFFFF' },
+      tonik:         { name: 'Tonik',           label: 'TK',   bg: '#101820', fg: '#00FFB2' },
+      other:         { name: 'Other',           label: '🏦',   bg: '#2A2A2A', fg: '#FFFFFF' }
     };
 
     let data = {};
@@ -483,7 +550,38 @@
           ...d,
           balance: parseFloat(d.balance) || 0
       }));
+
+      // 🏦 ACCOUNTS BREAKDOWN (new, additive) — sanitize + one-time migrate old liquidCash so no balance is lost
+      data.accounts = (data.accounts || []).filter(a => a && typeof a === 'object').map(a => ({
+          id: a.id || ('acct_' + Date.now() + Math.random().toString(36).slice(2)),
+          name: a.name || 'Account',
+          provider: BANK_PROVIDERS[a.provider] ? a.provider : 'other',
+          balance: parseFloat(a.balance) || 0,
+          isPrimary: !!a.isPrimary
+      }));
+      if (data.accounts.length === 0) {
+          data.accounts.push({ id: 'acct_primary', name: 'Cash', provider: 'cash', balance: parseFloat(data.liquidCash) || 0, isPrimary: true });
+      }
+      if (!data.accounts.some(a => a.isPrimary)) data.accounts[0].isPrimary = true;
+      recalcLiquid();
     }
+
+    // Total liquidity is always the sum of individual accounts — the single source of truth.
+    function recalcLiquid() { data.liquidCash = (data.accounts || []).reduce((s, a) => s + (parseFloat(a.balance) || 0), 0); }
+
+    // Existing flows (debt payments, transfers, settlements, adjustments) move money through the
+    // designated primary account, so the accounts breakdown always stays in sync with the total.
+    function getPrimaryAccountIdx() {
+      if (!data.accounts || data.accounts.length === 0) return -1;
+      let idx = data.accounts.findIndex(a => a.isPrimary);
+      return idx >= 0 ? idx : 0;
+    }
+    function adjustLiquid(delta) {
+      const idx = getPrimaryAccountIdx();
+      if (idx >= 0) data.accounts[idx].balance = (parseFloat(data.accounts[idx].balance) || 0) + delta;
+      recalcLiquid();
+    }
+    function setLiquidTotal(newTotal) { adjustLiquid(newTotal - (data.liquidCash || 0)); }
 
     function saveData() { localStorage.setItem(VERSION, JSON.stringify(data)); renderUI(); }
     function clampInt(v, min, max) { const n = parseInt(v, 10); if (Number.isNaN(n)) return min; return Math.max(min, Math.min(max, n)); }
@@ -578,7 +676,7 @@
       const toRoll = parseFloat(document.getElementById('inp-settle-roll').value) || 0;
 
       data.history.push({ id: data.currentMonth, txs: [...data.transactions], stats: { income: calculateStats().income, expenses: calculateStats().expenses, bankSnapshot: data.liquidCash } });
-      data.liquidCash += toSave; data.config.rollover = toRoll;
+      adjustLiquid(toSave); data.config.rollover = toRoll;
       if (toSave > 0) runVaultIntercept(toSave);
       data.transactions = []; data.currentMonth = realMonth; viewMonth = realMonth;
       
@@ -660,7 +758,7 @@
 
         if (jar.type === 'wish' && jar.target > 0 && jar.saved >= jar.target) {
             if (confirm(`CLAIM REWARD: Buy "${jar.name}" for ₱${(jar.saved||0).toLocaleString()}?\n\nThis will deduct the amount from your Bank and move it to the Trophy Room.`)) {
-                data.liquidCash -= jar.saved; data.trophyRoom.unshift({ ...jar, dateBought: new Date().toISOString() }); data.jars.splice(idx, 1);
+                adjustLiquid(-jar.saved); data.trophyRoom.unshift({ ...jar, dateBought: new Date().toISOString() }); data.jars.splice(idx, 1);
                 closeModal(null, 'modal-manage-jar'); saveData(); return;
             }
         }
@@ -684,7 +782,7 @@
       const amt = parseFloat(rawAmt.replace(/[^\d.-]/g, ''));
       if(amt && !isNaN(amt)) {
           if (amt > data.liquidCash) return alert("Not enough cash in bank to make this payment.");
-          data.liquidCash -= amt; data.debts[i].balance -= amt; 
+          adjustLiquid(-amt); data.debts[i].balance -= amt; 
           data.transactions.unshift({ id: Date.now(), title: `Payment: ${data.debts[i].name}`, amount: amt, type: 'exp', catIcon: '🏦', catId: 'Debt', date: new Date().toISOString() });
           if(data.debts[i].balance <= 0) { alert(`${data.debts[i].name} paid off!`); data.debts.splice(i,1); }
           saveData(); 
@@ -740,13 +838,13 @@
       const t = document.getElementById('inp-tx-title').value.trim(); const rawAmt = document.getElementById('inp-tx-amt').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch (e) { return alert("Invalid math."); }
       if (a && !isNaN(a)) {
         let finalType = isExpense ? 'exp' : 'inc'; let finalTag = selectedCat.id;
-        if (isExpense && isAssetTx) { finalType = 'asset'; if (a > data.liquidCash && !confirm("Warning: Asset costs more than Bank balance. Save anyway?")) return; data.liquidCash -= a; }
+        if (isExpense && isAssetTx) { finalType = 'asset'; if (a > data.liquidCash && !confirm("Warning: Asset costs more than Bank balance. Save anyway?")) return; adjustLiquid(-a); }
         if (!isExpense) finalTag = document.getElementById('inp-tx-stream').value;
         data.transactions.unshift({ id: Date.now(), title: t || selectedCat.name, amount: a, type: finalType, catIcon: selectedCat.icon, catId: finalTag, date: new Date().toISOString() });
         closeModal(null, 'modal-tx'); document.getElementById('inp-tx-title').value = ""; document.getElementById('inp-tx-amt').value = ""; saveData();
       }
     }
-    function deleteTx(i) { if (confirm("Delete?")) { if(data.transactions[i].type === 'asset') data.liquidCash += data.transactions[i].amount; data.transactions.splice(i, 1); saveData(); } }
+    function deleteTx(i) { if (confirm("Delete?")) { if(data.transactions[i].type === 'asset') adjustLiquid(data.transactions[i].amount); data.transactions.splice(i, 1); saveData(); } }
     
     function saveBill() { 
         const n = document.getElementById('inp-bill-name').value.trim(); 
@@ -781,7 +879,7 @@
     function saveAdjustment() {
       const rawAmt = document.getElementById('inp-adjust-amt').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
       if (!isNaN(a)) { 
-        if (adjMode === 'add') { data.liquidCash += a; runVaultIntercept(a); } else if (adjMode === 'sub') { data.liquidCash -= a; } else { data.liquidCash = a; }
+        if (adjMode === 'add') { adjustLiquid(a); runVaultIntercept(a); } else if (adjMode === 'sub') { adjustLiquid(-a); } else { setLiquidTotal(a); }
         closeModal(null, 'modal-adjust'); document.getElementById('inp-adjust-amt').value = ""; saveData(); 
       }
     }
@@ -794,7 +892,7 @@
     function transferFromBank() {
       const rawAmt = document.getElementById('inp-transfer-amt').value; let a = 0; try { a = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch(e) {}
       if (a && !isNaN(a) && a > 0) {
-        if (a > data.liquidCash) return alert("Not enough Bank cash!"); data.liquidCash -= a;
+        if (a > data.liquidCash) return alert("Not enough Bank cash!"); adjustLiquid(-a);
         data.transactions.unshift({ id: Date.now(), title: "Transfer from Bank", amount: a, type: 'inc', catIcon: '🏦', catId: 'Transfer', date: new Date().toISOString() });
         closeModal(null, 'modal-income'); document.getElementById('inp-transfer-amt').value = ""; saveData();
       }
@@ -862,6 +960,7 @@
       // TRY/CATCH BLAST SHIELDS FOR LISTS
       try { renderQuickPresets(); } catch(e) { console.error("Quick Presets Error", e); }
       try { renderCategoryBudgets(stats.txs); } catch(e) { console.error("Category Budgets Error", e); }
+      try { renderAccountsGrid(); } catch(e) { console.error("Accounts Grid Error", e); }
       try { renderJarList(); } catch(e) { console.error("Jar List Error", e); }
       try { renderDebtList(); } catch(e) { console.error("Debt List Error", e); }
       try { renderTrophyList(); } catch(e) { console.error("Trophy Error", e); }
@@ -940,6 +1039,132 @@
       const grid = document.getElementById('debt-grid');
       if(!data.debts || data.debts.length === 0) { grid.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No active liabilities.</div>`; return; }
       grid.innerHTML = data.debts.map((d, i) => `<div class="tx-item" style="border-left:4px solid var(--danger); background:#1a1111; cursor:pointer;" onclick="payDebt(${i})"><div style="flex:1"><div class="bold">${d.name}</div><div class="label">TAP TO PAY</div></div><div class="mono bold text-red">₱${(d.balance||0).toLocaleString()}</div></div>`).join('');
+    }
+
+    let acctAdjMode = 'set';
+
+    function renderAccountsGrid() {
+      const grid = document.getElementById('accounts-grid'); if (!grid) return; grid.innerHTML = "";
+      if (!data.accounts || data.accounts.length === 0) { grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#444; font-size:0.8rem;">No accounts yet.</div>`; return; }
+      const isCurrentMonth = viewMonth === data.currentMonth;
+      data.accounts.forEach((acct, i) => {
+        const p = BANK_PROVIDERS[acct.provider] || BANK_PROVIDERS.other;
+        const badge = `<div style="width:44px; height:44px; border-radius:14px; background:${p.bg}; color:${p.fg}; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:${p.label.length > 3 ? '0.6rem' : '0.85rem'}; margin-bottom:12px;">${p.label}</div>`;
+        const primaryTag = acct.isPrimary ? `<div style="font-size:0.6rem; color:var(--gold); margin-top:4px;">★ PRIMARY</div>` : '';
+        grid.innerHTML += `<div class="card" style="padding:15px; margin:0; cursor:${isCurrentMonth ? 'pointer' : 'default'}; border:1px solid ${acct.isPrimary ? 'var(--gold)' : '#222'};" ${isCurrentMonth ? `onclick="openManageAccount(${i})"` : ''}>${badge}<div class="bold" style="font-size:0.9rem;">${acct.name}</div><div class="label" style="margin-top:2px;">${p.name}</div><div class="mono bold blur-sensitive" style="margin-top:8px; font-size:1.1rem;">₱${(acct.balance||0).toLocaleString()}</div>${primaryTag}</div>`;
+      });
+    }
+
+    function populateAcctProviderSelect() {
+      const sel = document.getElementById('inp-acct-provider');
+      sel.innerHTML = Object.keys(BANK_PROVIDERS).map(k => `<option value="${k}">${BANK_PROVIDERS[k].name}</option>`).join('');
+    }
+
+    function handleAcctProviderChange() {
+      const nameInp = document.getElementById('inp-acct-name');
+      const provider = document.getElementById('inp-acct-provider').value;
+      if (!nameInp.value.trim() || Object.values(BANK_PROVIDERS).some(p => p.name === nameInp.value.trim())) {
+        nameInp.value = BANK_PROVIDERS[provider] ? BANK_PROVIDERS[provider].name : '';
+      }
+    }
+
+    function openNewAccount() {
+      if (viewMonth !== data.currentMonth) return alert("You can only add accounts in the current month.");
+      document.getElementById('modal-account-header').innerText = "Add Account";
+      document.getElementById('inp-acct-index').value = "";
+      populateAcctProviderSelect();
+      document.getElementById('inp-acct-provider').value = 'cash';
+      document.getElementById('inp-acct-name').value = 'Cash';
+      document.getElementById('inp-acct-balance').value = "";
+      document.getElementById('div-acct-new-balance').classList.remove('hidden');
+      document.getElementById('div-acct-adjust').classList.add('hidden');
+      document.getElementById('btn-delete-account').classList.add('hidden');
+      const tog = document.getElementById('acct-primary-toggle'); tog.classList.remove('active'); tog.dataset.value = 'false';
+      openModal('modal-account');
+    }
+
+    function openManageAccount(index) {
+      if (viewMonth !== data.currentMonth) return alert("You can only edit accounts in the current month.");
+      const acct = data.accounts[index]; if (!acct) return;
+      document.getElementById('modal-account-header').innerText = `Manage: ${acct.name}`;
+      document.getElementById('inp-acct-index').value = index;
+      populateAcctProviderSelect();
+      document.getElementById('inp-acct-provider').value = acct.provider;
+      document.getElementById('inp-acct-name').value = acct.name;
+      document.getElementById('div-acct-new-balance').classList.add('hidden');
+      document.getElementById('div-acct-adjust').classList.remove('hidden');
+      document.getElementById('inp-acct-adjust-amt').value = "";
+      setAcctAdjMode('set', acct.balance);
+      document.getElementById('btn-delete-account').classList.remove('hidden');
+      const tog = document.getElementById('acct-primary-toggle'); tog.dataset.value = acct.isPrimary ? 'true' : 'false';
+      if (acct.isPrimary) tog.classList.add('active'); else tog.classList.remove('active');
+      openModal('modal-account');
+    }
+
+    function toggleAcctPrimary() {
+      const tog = document.getElementById('acct-primary-toggle');
+      const next = tog.dataset.value !== 'true';
+      tog.dataset.value = next ? 'true' : 'false';
+      if (next) tog.classList.add('active'); else tog.classList.remove('active');
+    }
+
+    function setAcctAdjMode(mode, currentBalance) {
+      acctAdjMode = mode;
+      document.getElementById('btn-acct-adj-add').style.borderColor = mode === 'add' ? 'var(--gold)' : 'transparent';
+      document.getElementById('btn-acct-adj-sub').style.borderColor = mode === 'sub' ? 'var(--gold)' : 'transparent';
+      document.getElementById('btn-acct-adj-set').style.borderColor = mode === 'set' ? 'var(--gold)' : 'transparent';
+      const idx = document.getElementById('inp-acct-index').value;
+      if (mode === 'set') {
+        const bal = currentBalance !== undefined ? currentBalance : (idx !== "" ? data.accounts[idx].balance : 0);
+        document.getElementById('inp-acct-adjust-amt').value = bal;
+      } else { document.getElementById('inp-acct-adjust-amt').value = ""; }
+    }
+
+    function saveAccount() {
+      const provider = document.getElementById('inp-acct-provider').value;
+      const name = document.getElementById('inp-acct-name').value.trim() || (BANK_PROVIDERS[provider] ? BANK_PROVIDERS[provider].name : 'Account');
+      const idxRaw = document.getElementById('inp-acct-index').value;
+      const wantsPrimary = document.getElementById('acct-primary-toggle').dataset.value === 'true';
+
+      if (idxRaw === "") {
+        // New account
+        const startBal = parseFloat(document.getElementById('inp-acct-balance').value) || 0;
+        const acct = { id: 'acct_' + Date.now() + Math.random().toString(36).slice(2), name, provider, balance: startBal, isPrimary: wantsPrimary };
+        if (wantsPrimary) data.accounts.forEach(a => a.isPrimary = false);
+        data.accounts.push(acct);
+      } else {
+        // Edit existing account
+        const idx = parseInt(idxRaw, 10); const acct = data.accounts[idx]; if (!acct) return;
+        acct.name = name; acct.provider = provider;
+
+        const rawAmt = document.getElementById('inp-acct-adjust-amt').value;
+        if (rawAmt !== "") {
+          let amt = 0; try { amt = eval(rawAmt.replace(/[^-()\d/*+.]/g, '')); } catch (e) {}
+          if (!isNaN(amt)) {
+            if (acctAdjMode === 'add') acct.balance = (acct.balance || 0) + amt;
+            else if (acctAdjMode === 'sub') acct.balance = (acct.balance || 0) - amt;
+            else acct.balance = amt;
+            if (acct.balance < 0) acct.balance = 0;
+          }
+        }
+        if (wantsPrimary) data.accounts.forEach((a, i) => a.isPrimary = (i === idx));
+      }
+
+      if (!data.accounts.some(a => a.isPrimary)) data.accounts[0].isPrimary = true;
+      recalcLiquid();
+      closeModal(null, 'modal-account'); saveData();
+    }
+
+    function deleteAccount() {
+      const idxRaw = document.getElementById('inp-acct-index').value; if (idxRaw === "") return;
+      const idx = parseInt(idxRaw, 10); const acct = data.accounts[idx]; if (!acct) return;
+      if (data.accounts.length <= 1) return alert("You need at least one account.");
+      if (!confirm(`Delete "${acct.name}"? This removes ₱${(acct.balance||0).toLocaleString()} from your total liquidity.`)) return;
+      const wasPrimary = acct.isPrimary;
+      data.accounts.splice(idx, 1);
+      if (wasPrimary && data.accounts.length > 0) data.accounts[0].isPrimary = true;
+      recalcLiquid();
+      closeModal(null, 'modal-account'); saveData();
     }
 
     function renderTrophyList() {
