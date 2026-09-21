@@ -172,7 +172,7 @@
             <div class="preset-row" id="quick-presets"></div>
         </div>
 
-        <div class="section-title">ACTIVITY</div>
+        <div class="section-title">ACTIVITY <span style="text-transform:none; letter-spacing:0; color:#444;">— tap any entry to edit</span></div>
         <div id="tx-list"></div>
       </div>
 
@@ -257,7 +257,7 @@
     <div class="modal-sheet">
       <h2>Month Settlement</h2>
       <p style="color:#888; margin-bottom:20px;">Your money stays in your accounts — this only closes out the month's budget.</p>
-      <div class="card" style="text-align:center;"><div class="label">UNSPENT BUDGET</div><div class="mono bold" style="font-size:2rem; color:var(--primary);" id="disp-settle-unspent">₱0</div></div>
+      <div class="card" style="text-align:center;"><div class="label">UNSPENT BUDGET</div><div class="mono bold blur-sensitive" style="font-size:2rem; color:var(--primary);" id="disp-settle-unspent">₱0</div></div>
       <div class="label">ROLLOVER TO NEW MONTH'S BUDGET</div>
       <input type="number" id="inp-settle-roll" placeholder="Amount to add to next month's budget">
       <button class="btn btn-primary" onclick="processSettlement()">Finalize & Start New Month</button>
@@ -327,7 +327,9 @@
 
   <div class="modal-overlay" id="modal-tx" onclick="closeModal(event, 'modal-tx')">
     <div class="modal-sheet">
-      <h2>New Entry</h2>
+      <h2 id="modal-tx-header">New Entry</h2>
+      <input type="hidden" id="inp-tx-edit-index" value="">
+      <p id="lbl-tx-legacy" class="hidden" style="font-size:0.72rem; color:var(--warning); background:rgba(255,159,10,0.1); border:1px solid rgba(255,159,10,0.3); padding:10px 12px; border-radius:12px; margin-bottom:16px;">This entry predates account tracking, so editing it won't change any account balance.</p>
       <div class="seg">
         <div id="btn-type-exp" class="btn" onclick="setTxType('exp')">Expense</div>
         <div id="btn-type-inc" class="btn" onclick="setTxType('inc')">Income</div>
@@ -362,6 +364,7 @@
       </div>
 
       <button class="btn btn-primary" id="btn-save-tx" onclick="saveTransaction()">SAVE</button>
+      <button class="btn btn-glass hidden" id="btn-delete-tx" style="margin-top:10px; color:var(--danger); border-color:var(--danger);" onclick="deleteFromEdit()">Delete Entry</button>
     </div>
   </div>
 
@@ -767,7 +770,8 @@
     function accountOptionsHtml(selectedId) {
       return (data.accounts || []).map(a => {
         const p = BANK_PROVIDERS[a.provider] || BANK_PROVIDERS.other;
-        return `<option value="${a.id}" ${a.id === selectedId ? 'selected' : ''}>${p.name} · ${a.name} (₱${(a.balance||0).toLocaleString()})</option>`;
+        const bal = data.config.privacyMode ? '••••' : `₱${(a.balance||0).toLocaleString()}`;
+        return `<option value="${a.id}" ${a.id === selectedId ? 'selected' : ''}>${p.name} · ${a.name} (${bal})</option>`;
       }).join('');
     }
     function fillAccountSelect(elId, selectedId) {
@@ -854,39 +858,129 @@
       });
     }
 
+    // Builds the transaction object described by the current form state.
+    function buildTxFromForm(amount, note) {
+      if (txMode === 'tfr') {
+        const fromId = document.getElementById('inp-tx-from').value;
+        const toId = document.getElementById('inp-tx-to').value;
+        if (fromId === toId) { alert("Pick two different accounts."); return null; }
+        const from = getAccount(fromId), to = getAccount(toId);
+        if (!from || !to) { alert("Pick valid accounts."); return null; }
+        return { title: note || `${from.name} → ${to.name}`, amount, type: 'transfer', catIcon: '⇄',
+                 catId: 'Transfer', fromAccountId: fromId, toAccountId: toId };
+      }
+      const accountId = document.getElementById('inp-tx-account').value;
+      if (!getAccount(accountId)) { alert("Pick an account first."); return null; }
+      let finalType = txMode === 'exp' ? 'exp' : 'inc';
+      let finalTag = selectedCat.id;
+      if (txMode === 'exp' && isAssetTx) finalType = 'asset';
+      if (txMode === 'inc') finalTag = document.getElementById('inp-tx-stream').value;
+      return { title: note || selectedCat.name, amount, type: finalType,
+               catIcon: selectedCat.icon, catId: finalTag, accountId };
+    }
+
+    function overdraftOk(tx) {
+      if (tx.type === 'inc') return true;
+      const id = tx.type === 'transfer' ? tx.fromAccountId : tx.accountId;
+      const acct = getAccount(id); if (!acct) return true;
+      if (tx.amount <= (acct.balance || 0)) return true;
+      return confirm(`${acct.name} only has ₱${(acct.balance||0).toLocaleString()}. Record anyway and go negative?`);
+    }
+
     function saveTransaction() {
       const note = document.getElementById('inp-tx-title').value.trim();
       const a = parseMath(document.getElementById('inp-tx-amt').value);
       if (!a || isNaN(a) || a <= 0) return alert("Enter a valid amount.");
 
-      if (txMode === 'tfr') {
-        const fromId = document.getElementById('inp-tx-from').value;
-        const toId = document.getElementById('inp-tx-to').value;
-        return commitTransfer(fromId, toId, a, note, 'modal-tx');
+      const editRaw = document.getElementById('inp-tx-edit-index').value;
+
+      /* ---- EDIT MODE ---- */
+      if (editRaw !== "") {
+        const idx = parseInt(editRaw, 10);
+        const old = data.transactions[idx];
+        if (!old) return alert("That entry no longer exists.");
+
+        const draft = buildTxFromForm(a, note); if (!draft) return;
+
+        // Undo the original's money effect first so the balance check sees real headroom.
+        applyTxEffect(old, -1);
+
+        const updated = Object.assign({}, draft, {
+          id: old.id, date: old.date, legacy: !!old.legacy
+        });
+        if (old.billRef) updated.billRef = old.billRef;
+
+        if (!overdraftOk(updated)) { applyTxEffect(old, 1); return; } // user backed out — restore
+
+        data.transactions[idx] = updated;
+        applyTxEffect(updated, 1);
+        closeTxModal(); saveData(); return;
       }
 
-      const accountId = document.getElementById('inp-tx-account').value;
-      const acct = getAccount(accountId);
-      if (!acct) return alert("Pick an account first.");
+      /* ---- CREATE MODE ---- */
+      const tx = buildTxFromForm(a, note); if (!tx) return;
+      tx.id = Date.now(); tx.date = new Date().toISOString(); tx.legacy = false;
+      if (!overdraftOk(tx)) return;
 
-      let finalType = txMode === 'exp' ? 'exp' : 'inc';
-      let finalTag = selectedCat.id;
-      if (txMode === 'exp' && isAssetTx) finalType = 'asset';
-      if (txMode === 'inc') finalTag = document.getElementById('inp-tx-stream').value;
-
-      if (finalType !== 'inc' && a > (acct.balance || 0)) {
-        if (!confirm(`${acct.name} only has ₱${(acct.balance||0).toLocaleString()}. Record anyway and go negative?`)) return;
-      }
-
-      const tx = { id: Date.now(), title: note || selectedCat.name, amount: a, type: finalType,
-                   catIcon: selectedCat.icon, catId: finalTag, accountId, legacy: false, date: new Date().toISOString() };
       data.transactions.unshift(tx);
       applyTxEffect(tx, 1);
-      if (finalType === 'inc') runVaultIntercept(a);
+      if (tx.type === 'inc') runVaultIntercept(a);
+      closeTxModal(); saveData();
+    }
 
+    function closeTxModal() {
       closeModal(null, 'modal-tx');
-      document.getElementById('inp-tx-title').value = ""; document.getElementById('inp-tx-amt').value = "";
-      saveData();
+      document.getElementById('inp-tx-title').value = "";
+      document.getElementById('inp-tx-amt').value = "";
+      document.getElementById('inp-tx-edit-index').value = "";
+    }
+
+    function openEditTx(i) {
+      if (viewMonth !== data.currentMonth) return alert("You can only edit entries in the current month.");
+      const tx = data.transactions[i]; if (!tx) return;
+
+      document.getElementById('inp-tx-edit-index').value = i;
+      document.getElementById('modal-tx-header').innerText = "Edit Entry";
+      document.getElementById('btn-delete-tx').classList.remove('hidden');
+      document.getElementById('lbl-tx-legacy').classList.toggle('hidden', !tx.legacy);
+
+      // Asset entries live under the Expense tab with the toggle on.
+      isAssetTx = (tx.type === 'asset');
+      setTxType(tx.type === 'transfer' ? 'tfr' : (tx.type === 'inc' ? 'inc' : 'exp'));
+
+      if (tx.type === 'transfer') {
+        fillAccountSelect('inp-tx-from', tx.fromAccountId);
+        fillAccountSelect('inp-tx-to', tx.toAccountId);
+      } else {
+        fillAccountSelect('inp-tx-account', tx.accountId);
+        const pool = tx.type === 'inc' ? CATEGORIES.inc : CATEGORIES.exp;
+        const match = pool.find(c => c.id === tx.catId) || pool.find(c => c.icon === tx.catIcon);
+        if (match) { selectedCat = match; renderCatGrid(); }
+        if (tx.type === 'inc') {
+          const sel = document.getElementById('inp-tx-stream');
+          if (![...sel.options].some(o => o.value === tx.catId)) {
+            sel.insertAdjacentHTML('afterbegin', `<option value="${tx.catId}">${tx.catId}</option>`);
+          }
+          sel.value = tx.catId;
+        }
+      }
+
+      const tog = document.getElementById('asset-toggle-container');
+      if (isAssetTx) { tog.classList.add('active'); const b = document.getElementById('btn-save-tx'); b.innerText = "SAVE ASSET"; b.className = "btn btn-claim"; }
+      else tog.classList.remove('active');
+
+      document.getElementById('inp-tx-title').value = tx.title || "";
+      document.getElementById('inp-tx-amt').value = tx.amount;
+      openModal('modal-tx');
+    }
+
+    function deleteFromEdit() {
+      const raw = document.getElementById('inp-tx-edit-index').value; if (raw === "") return;
+      const idx = parseInt(raw, 10);
+      if (!confirm("Delete this entry? The amount will be returned to the account.")) return;
+      applyTxEffect(data.transactions[idx], -1);
+      data.transactions.splice(idx, 1);
+      closeTxModal(); saveData();
     }
 
     function commitTransfer(fromId, toId, amt, note, modalId) {
@@ -1197,10 +1291,6 @@
           document.getElementById('main-fab').style.display = isCurrentMonth ? 'flex' : 'none';
           document.getElementById('div-account-actions').style.display = isCurrentMonth ? 'block' : 'none';
 
-          const blurElements = document.querySelectorAll('.blur-sensitive');
-          if (data.config.privacyMode) { blurElements.forEach(el => el.classList.add('active')); document.getElementById('btn-privacy').classList.add('active'); }
-          else { blurElements.forEach(el => el.classList.remove('active')); document.getElementById('btn-privacy').classList.remove('active'); }
-
           document.getElementById('disp-safe').innerText = `₱ ${(stats.safe||0).toLocaleString()}`;
 
           let daysRemaining = 1;
@@ -1252,6 +1342,17 @@
 
       const slider = document.getElementById('slider-safe'); if (slider) slider.value = String(clampInt(data.config.safePct, 0, 100));
       const lbl = document.getElementById('lbl-safe-pct'); if (lbl) lbl.innerText = `${clampInt(data.config.safePct, 0, 100)}%`;
+
+      // Privacy must run LAST: every list above is rebuilt from scratch each render,
+      // so blurring earlier would miss all the freshly-created elements.
+      try { applyPrivacy(); } catch(e) { console.error("Privacy Error", e); }
+    }
+
+    function applyPrivacy() {
+      const on = !!data.config.privacyMode;
+      document.querySelectorAll('.blur-sensitive').forEach(el => el.classList.toggle('active', on));
+      document.getElementById('btn-privacy').classList.toggle('active', on);
+      document.getElementById('btn-privacy').innerText = on ? '🙈' : '👁️';
     }
 
     function badgeHtml(provider, size) {
@@ -1298,7 +1399,7 @@
             const limit = data.config.categoryBudgets[catId]; const catDef = CATEGORIES.exp.find(c => c.id === catId); if (!catDef) return;
             const spent = (txs||[]).filter(t => t.type === 'exp' && t.catId === catId).reduce((s,t) => s + (parseFloat(t.amount)||0), 0);
             const pct = Math.min(100, (spent / limit) * 100); const isOver = spent > limit; const barColor = isOver ? 'var(--danger)' : 'var(--primary)';
-            container.innerHTML += `<div style="margin-bottom:12px;"><div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#888; font-weight:bold; margin-bottom:4px; text-transform:uppercase;"><span>${catDef.icon} ${catDef.name}</span><span style="color:${isOver ? 'var(--danger)' : '#fff'};">₱${(spent||0).toLocaleString()} / ₱${(limit||0).toLocaleString()}</span></div><div style="height:6px; background:#222; border-radius:3px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:${barColor}; transition:width 0.3s;"></div></div></div>`;
+            container.innerHTML += `<div style="margin-bottom:12px;"><div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#888; font-weight:bold; margin-bottom:4px; text-transform:uppercase;"><span>${catDef.icon} ${catDef.name}</span><span class="blur-sensitive" style="color:${isOver ? 'var(--danger)' : '#fff'};">₱${(spent||0).toLocaleString()} / ₱${(limit||0).toLocaleString()}</span></div><div style="height:6px; background:#222; border-radius:3px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:${barColor}; transition:width 0.3s;"></div></div></div>`;
         });
     }
 
@@ -1332,7 +1433,7 @@
         const borderColor = isPriority ? 'var(--success)' : (isReady ? 'var(--gold)' : '#333');
         const icon = isPriority ? '🛡️' : (isReady ? '🎁' : '🧞');
         const targetText = isPriority || !jar.target || jar.target <= 0 ? '' : ` / ₱${(jar.target||0).toLocaleString()}`;
-        const cardHtml = `<div class="card" style="padding:15px; margin:0; cursor:${isCurrentMonth ? 'pointer' : 'default'}; border:1px solid ${borderColor};" ${isCurrentMonth ? `onclick="openManageJar(${i})"` : ''}><div style="font-size:1.5rem; margin-bottom:5px;">${icon}</div><div class="bold" style="font-size:1rem;">${jar.name}</div><div class="label" style="margin-top:5px; color:#fff;">₱${(jar.saved||0).toLocaleString()}${targetText}</div>${ruleHtml}${paceHtml}${actionHtml}</div>`;
+        const cardHtml = `<div class="card" style="padding:15px; margin:0; cursor:${isCurrentMonth ? 'pointer' : 'default'}; border:1px solid ${borderColor};" ${isCurrentMonth ? `onclick="openManageJar(${i})"` : ''}><div style="font-size:1.5rem; margin-bottom:5px;">${icon}</div><div class="bold" style="font-size:1rem;">${jar.name}</div><div class="label blur-sensitive" style="margin-top:5px; color:#fff;">₱${(jar.saved||0).toLocaleString()}${targetText}</div>${ruleHtml}${paceHtml}${actionHtml}</div>`;
         if (isPriority) pGrid.innerHTML += cardHtml; else wGrid.innerHTML += cardHtml;
       });
     }
@@ -1340,7 +1441,7 @@
     function renderDebtList() {
       const grid = document.getElementById('debt-grid');
       if (!data.debts || data.debts.length === 0) { grid.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No active liabilities.</div>`; return; }
-      grid.innerHTML = data.debts.map((d, i) => `<div class="tx-item" style="border-left:4px solid var(--danger); background:#1a1111; cursor:pointer;" onclick="payDebt(${i})"><div style="flex:1"><div class="bold">${d.name}</div><div class="label">TAP TO PAY</div></div><div class="mono bold text-red">₱${(d.balance||0).toLocaleString()}</div></div>`).join('');
+      grid.innerHTML = data.debts.map((d, i) => `<div class="tx-item" style="border-left:4px solid var(--danger); background:#1a1111; cursor:pointer;" onclick="payDebt(${i})"><div style="flex:1"><div class="bold">${d.name}</div><div class="label">TAP TO PAY</div></div><div class="mono bold text-red blur-sensitive">₱${(d.balance||0).toLocaleString()}</div></div>`).join('');
     }
 
     function renderTrophyList() {
@@ -1349,7 +1450,7 @@
       data.trophyRoom.forEach(t => {
         if (!t) return; let vHtml = '';
         if (t.goalDate && t.dateBought) { const daysDiff = Math.floor((new Date(t.goalDate) - new Date(t.dateBought)) / (1000*60*60*24)); vHtml = daysDiff >= 0 ? `<div style="font-size:0.65rem; color:var(--success);">Beat goal by ${daysDiff} days!</div>` : `<div style="font-size:0.65rem; color:#888;">Missed goal by ${Math.abs(daysDiff)} days</div>`; }
-        list.innerHTML += `<div class="trophy-item"><div style="font-size:1.5rem; margin-right:15px;">🏆</div><div style="flex:1;"><div class="bold">${t.name}</div><div class="label" style="margin-bottom:2px;">BOUGHT: ${new Date(t.dateBought).toLocaleDateString()}</div>${vHtml}</div><div class="mono bold text-gold">-₱${(t.target ?? t.saved ?? 0).toLocaleString()}</div></div>`;
+        list.innerHTML += `<div class="trophy-item"><div style="font-size:1.5rem; margin-right:15px;">🏆</div><div style="flex:1;"><div class="bold">${t.name}</div><div class="label" style="margin-bottom:2px;">BOUGHT: ${new Date(t.dateBought).toLocaleDateString()}</div>${vHtml}</div><div class="mono bold text-gold blur-sensitive">-₱${(t.target ?? t.saved ?? 0).toLocaleString()}</div></div>`;
       });
     }
 
@@ -1363,8 +1464,11 @@
       const list = document.getElementById('asset-list'); list.innerHTML = ""; const assets = (txs||[]).filter(t => t && t.type === 'asset');
       if (assets.length === 0) { list.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No assets logged this month.</div>`; return; }
       assets.forEach(tx => {
-        const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
-        list.innerHTML += `<div class="tx-item" style="border: 1px solid rgba(255, 214, 10, 0.3);"><div class="icon-box icon-asset">${tx.catIcon || '📦'}</div><div style="flex:1; min-width:0;"><div class="bold">${tx.title}</div><div>${acctTagHtml(tx.accountId)}</div></div><div class="mono bold text-gold blur-sensitive">-₱${(parseFloat(tx.amount)||0).toLocaleString()}</div>${del}</div>`;
+        const gi = data.transactions.indexOf(tx);
+        const editable = viewMonth === data.currentMonth;
+        const del = editable ? `<div style="margin-left:15px; color:#444; cursor:pointer; padding:0 4px;" onclick="event.stopPropagation(); deleteTx(${gi})">✕</div>` : '';
+        const tap = editable ? ` onclick="openEditTx(${gi})"` : '';
+        list.innerHTML += `<div class="tx-item"${tap} style="border: 1px solid rgba(255, 214, 10, 0.3); cursor:${editable?'pointer':'default'};"><div class="icon-box icon-asset">${tx.catIcon || '📦'}</div><div style="flex:1; min-width:0;"><div class="bold">${tx.title}</div><div>${acctTagHtml(tx.accountId)}</div></div><div class="mono bold text-gold blur-sensitive">-₱${(parseFloat(tx.amount)||0).toLocaleString()}</div>${del}</div>`;
       });
     }
 
@@ -1377,12 +1481,15 @@
       Object.keys(groups).forEach(date => {
         list.innerHTML += `<div class="label" style="margin-top:20px; margin-left:5px;">${date}</div>`;
         groups[date].forEach(tx => {
-          const del = (viewMonth === data.currentMonth) ? `<div style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteTx(${data.transactions.indexOf(tx)})">✕</div>` : '';
+          const gi = data.transactions.indexOf(tx);
+          const editable = viewMonth === data.currentMonth;
+          const del = editable ? `<div style="margin-left:15px; color:#444; cursor:pointer; padding:0 4px;" onclick="event.stopPropagation(); deleteTx(${gi})">✕</div>` : '';
+          const tap = editable ? ` style="cursor:pointer;" onclick="openEditTx(${gi})"` : '';
           if (tx.type === 'transfer') {
-            list.innerHTML += `<div class="tx-item"><div class="icon-box icon-tfr">⇄</div><div style="flex:1; min-width:0;"><div class="bold">${tx.title}</div><div>${acctTagHtml(tx.fromAccountId)} ${acctTagHtml(tx.toAccountId)}</div></div><div class="mono bold" style="color:var(--warning);">₱${(parseFloat(tx.amount)||0).toLocaleString()}</div>${del}</div>`;
+            list.innerHTML += `<div class="tx-item"${tap}><div class="icon-box icon-tfr">⇄</div><div style="flex:1; min-width:0;"><div class="bold">${tx.title}</div><div>${acctTagHtml(tx.fromAccountId)} ${acctTagHtml(tx.toAccountId)}</div></div><div class="mono bold blur-sensitive" style="color:var(--warning);">₱${(parseFloat(tx.amount)||0).toLocaleString()}</div>${del}</div>`;
           } else {
             const c = tx.type === 'exp' ? 'icon-exp' : 'icon-inc'; const ac = tx.type === 'exp' ? 'text-red' : 'text-teal'; const s = tx.type === 'exp' ? '-' : '+';
-            list.innerHTML += `<div class="tx-item"><div class="icon-box ${c}">${tx.catIcon || '•'}</div><div style="flex:1; min-width:0;"><div class="bold">${tx.title}</div><div>${acctTagHtml(tx.accountId)}</div></div><div class="mono bold ${ac} blur-sensitive">${s}₱${(parseFloat(tx.amount)||0).toLocaleString()}</div>${del}</div>`;
+            list.innerHTML += `<div class="tx-item"${tap}><div class="icon-box ${c}">${tx.catIcon || '•'}</div><div style="flex:1; min-width:0;"><div class="bold">${tx.title}</div><div>${acctTagHtml(tx.accountId)}</div></div><div class="mono bold ${ac} blur-sensitive">${s}₱${(parseFloat(tx.amount)||0).toLocaleString()}</div>${del}</div>`;
           }
         });
       });
@@ -1420,7 +1527,7 @@
         al.innerHTML = entries.map(([id, val]) => {
           const a = getAccount(id); const p = a ? (BANK_PROVIDERS[a.provider] || BANK_PROVIDERS.other) : BANK_PROVIDERS.other;
           const w = Math.max(4, (val / maxV) * 100);
-          return `<div class="tx-item">${badgeHtml(a ? a.provider : 'other', 36)}<div style="flex:1; min-width:0; margin-left:12px;"><div class="bold" style="font-size:0.9rem;">${a ? a.name : 'Unknown'}</div><div style="height:4px; background:#222; border-radius:2px; margin-top:6px; overflow:hidden;"><div style="width:${w}%; height:100%; background:${p.bg};"></div></div></div><div class="mono bold text-red" style="margin-left:12px;">₱${val.toLocaleString()}</div></div>`;
+          return `<div class="tx-item">${badgeHtml(a ? a.provider : 'other', 36)}<div style="flex:1; min-width:0; margin-left:12px;"><div class="bold" style="font-size:0.9rem;">${a ? a.name : 'Unknown'}</div><div style="height:4px; background:#222; border-radius:2px; margin-top:6px; overflow:hidden;"><div style="width:${w}%; height:100%; background:${p.bg};"></div></div></div><div class="mono bold text-red blur-sensitive" style="margin-left:12px;">₱${val.toLocaleString()}</div></div>`;
         }).join('');
       }
 
@@ -1428,7 +1535,7 @@
       targetTxs.forEach(t => { if (t && t.type === 'inc') streams[t.catId] = (streams[t.catId] || 0) + (parseFloat(t.amount) || 0); });
       const plList = document.getElementById('pl-list');
       if (Object.keys(streams).length === 0) plList.innerHTML = `<div style="text-align:center; color:#444; font-size:0.8rem;">No revenue streams tracked in this period.</div>`;
-      else plList.innerHTML = Object.entries(streams).map(([name, val]) => `<div class="tx-item" style="background:#0a1a1a; border-left:3px solid var(--primary);"><div style="flex:1"><div class="bold">${name}</div></div><div class="mono bold text-teal">₱${(val||0).toLocaleString()}</div></div>`).join('');
+      else plList.innerHTML = Object.entries(streams).map(([name, val]) => `<div class="tx-item" style="background:#0a1a1a; border-left:3px solid var(--primary);"><div style="flex:1"><div class="bold">${name}</div></div><div class="mono bold text-teal blur-sensitive">₱${(val||0).toLocaleString()}</div></div>`).join('');
     }
 
     function renderTimeline(txs) {
@@ -1453,7 +1560,7 @@
         const isPaid = b.lastPaidMonth === data.currentMonth; const diff = (b.day||0) - today;
         const status = isPaid ? "Paid" : (today > b.day ? "Past Due" : (diff <= 3 ? `Due in ${diff} days` : `Due Day ${b.day}`));
         const color = isPaid ? "var(--success)" : (today > b.day ? "#666" : (diff <= 3 ? "var(--warning)" : "var(--primary)"));
-        list.innerHTML += `<div class="card" style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-left:3px solid ${color};"><div style="display:flex; align-items:center; min-width:0;"><div class="bill-checkbox ${isPaid ? 'paid' : ''}" onclick="markBillPaid(${data.bills.indexOf(b)})"></div><div style="min-width:0;"><div class="bold" style="${isPaid ? 'text-decoration:line-through; color:#666;' : ''}">${b.name}</div><div class="label" style="color:${color}; margin-bottom:2px;">${status}</div>${acctTagHtml(b.accountId)}</div></div><div style="display:flex; align-items:center;"><span class="mono bold" style="${isPaid ? 'color:#666;' : ''}">₱${(b.amount||0).toLocaleString()}</span><span style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteBill(${data.bills.indexOf(b)})">✕</span></div></div>`;
+        list.innerHTML += `<div class="card" style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-left:3px solid ${color};"><div style="display:flex; align-items:center; min-width:0;"><div class="bill-checkbox ${isPaid ? 'paid' : ''}" onclick="markBillPaid(${data.bills.indexOf(b)})"></div><div style="min-width:0;"><div class="bold" style="${isPaid ? 'text-decoration:line-through; color:#666;' : ''}">${b.name}</div><div class="label" style="color:${color}; margin-bottom:2px;">${status}</div>${acctTagHtml(b.accountId)}</div></div><div style="display:flex; align-items:center;"><span class="mono bold blur-sensitive" style="${isPaid ? 'color:#666;' : ''}">₱${(b.amount||0).toLocaleString()}</span><span style="margin-left:15px; color:#444; cursor:pointer;" onclick="deleteBill(${data.bills.indexOf(b)})">✕</span></div></div>`;
       });
     }
 
@@ -1489,7 +1596,18 @@
     }
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(e, id) { if (!e || e.target.id === id) document.getElementById(id).classList.remove('open'); }
-    function openNewTx() { isAssetTx = false; document.getElementById('asset-toggle-container').classList.remove('active'); setTxType('exp'); openModal('modal-tx'); }
+    function openNewTx() {
+      isAssetTx = false;
+      document.getElementById('asset-toggle-container').classList.remove('active');
+      document.getElementById('inp-tx-edit-index').value = "";
+      document.getElementById('modal-tx-header').innerText = "New Entry";
+      document.getElementById('btn-delete-tx').classList.add('hidden');
+      document.getElementById('lbl-tx-legacy').classList.add('hidden');
+      document.getElementById('inp-tx-title').value = "";
+      document.getElementById('inp-tx-amt').value = "";
+      setTxType('exp');
+      openModal('modal-tx');
+    }
     function openNewBill() {
       document.getElementById('inp-bill-name').value = ""; document.getElementById('inp-bill-amt').value = ""; document.getElementById('inp-bill-day').value = "";
       fillAccountSelect('inp-bill-account'); openModal('modal-bill');
@@ -1524,7 +1642,7 @@
       matches.forEach(m => {
         const c = m.type === 'exp' ? 'text-red' : (m.type === 'transfer' ? '' : 'text-teal');
         const s = m.type === 'exp' ? '-' : (m.type === 'transfer' ? '' : '+');
-        res.innerHTML += `<div class="tx-item"><div class="bold" style="font-size:1.2rem; margin-right:10px;">${m.catIcon || '•'}</div><div style="flex:1; min-width:0;"><div class="bold">${m.title}</div><div class="label">${m.src}</div>${m.type === 'transfer' ? '' : acctTagHtml(m.accountId)}</div><div class="mono bold ${c}" style="${m.type==='transfer'?'color:var(--warning);':''}">${s}₱${(parseFloat(m.amount)||0).toLocaleString()}</div></div>`;
+        res.innerHTML += `<div class="tx-item"><div class="bold" style="font-size:1.2rem; margin-right:10px;">${m.catIcon || '•'}</div><div style="flex:1; min-width:0;"><div class="bold">${m.title}</div><div class="label">${m.src}</div>${m.type === 'transfer' ? '' : acctTagHtml(m.accountId)}</div><div class="mono bold blur-sensitive ${c}" style="${m.type==='transfer'?'color:var(--warning);':''}">${s}₱${(parseFloat(m.amount)||0).toLocaleString()}</div></div>`;
       });
     }
   </script>
